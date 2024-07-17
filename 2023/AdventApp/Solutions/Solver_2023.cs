@@ -403,5 +403,59 @@ namespace NewAdventApp
             }
             return -1;
         }
+
+        public string Solve_04_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+            var sum = 0;
+            foreach (var line in input.Split("\n"))
+            {
+                var formattedLine = line.Replace("  ", " ").Replace("  ", " ").Replace("  ", " ");
+                List<int> winningNumbers = formattedLine.Split(":").Last().Split("|").First().Trim().Split(" ").Select(n => int.Parse(n)).ToList();
+                List<int> myNumbers = formattedLine.Split("|").Last().Trim().Split(" ").Select(n => int.Parse(n)).ToList();
+                int winners = winningNumbers.Intersect(myNumbers).Count();
+                sum += (int)Math.Pow(2, winners - 1);
+
+                _logger.LogInformation(line + "  -----> " + (int)Math.Pow(2, winners - 1));
+            }
+
+            return sum.ToString();
+        }
+
+        public string Solve_04_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+            var lastCardNumber = input.Split("\n").Count();
+
+            var results = new Dictionary<int, int>();
+            for (int i = 1; i <= lastCardNumber; i++)
+            {
+                results.Add(i, 1);
+            }
+
+            var sum = 0;
+            for (int i = 1; i <= lastCardNumber; i++)
+            {
+                var line = input.Split("\n")[i - 1];
+                var formattedLine = line.Replace("  ", " ").Replace("  ", " ").Replace("  ", " ");
+                List<int> winningNumbers = formattedLine.Split(":").Last().Split("|").First().Trim().Split(" ").Select(n => int.Parse(n)).ToList();
+                List<int> myNumbers = formattedLine.Split("|").Last().Trim().Split(" ").Select(n => int.Parse(n)).ToList();
+                int winners = winningNumbers.Intersect(myNumbers).Count();
+                _logger.LogInformation($"Card {i}: {winners} winners");
+
+                if (winners != 0)
+                {
+                    _logger.LogInformation($"Card {i}: {results[i]}");
+                    for (int j = i + 1; j <= lastCardNumber && j <= i + winners; j++)
+                    {
+                        results[j] = results[j] + results[i];
+                    }
+                }
+
+                sum += results[i];
+            }
+
+            return sum.ToString();
+        }
     }
 }
