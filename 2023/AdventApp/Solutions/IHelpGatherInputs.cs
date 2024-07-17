@@ -23,7 +23,6 @@ namespace NewAdventApp
 
             if (File.Exists(filePath))
             {
-                // Read file using StreamReader. Reads file line by line
                 return new StreamReader(filePath);
             }
 
