@@ -473,8 +473,6 @@ namespace NewAdventApp
             var temperatureToHumidityMap = Day05_GetMapForType("temperature-to-humidity map:", "humidity-to-location map:", input);
             var humidityToLocationMap = Day05_GetMapForType("humidity-to-location map:", "end-of-file", input);
 
-            // _logger.LogInformation($"fertilizerToWaterMap:\n{Day05_MapToString(soilToFertilizerMap)}");
-
             foreach (var seed in seeds)
             {
                 var soil = Day05_A_UseMap(seedToSoilMap, seed);
@@ -668,6 +666,85 @@ namespace NewAdventApp
             }
 
             return locations.Min(l => Math.Min(double.Parse(l.Item1), double.Parse(l.Item2))).ToString();
+        }
+
+        public string Solve_06_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var times = new List<int>();
+            foreach (var time in input.Split("\n").First().Split(":").Last().Split(" "))
+            {
+                if (string.IsNullOrWhiteSpace(time))
+                {
+                    continue;
+                }
+
+                times.Add(int.Parse(time));
+            }
+
+            var distances = new List<int>();
+            foreach (var distance in input.Split("\n").Last().Split(":").Last().Split(" "))
+            {
+                if (string.IsNullOrWhiteSpace(distance))
+                {
+                    continue;
+                }
+
+                distances.Add(int.Parse(distance));
+            }
+
+            var marginForError = 1;
+            for (int i = 0; i < times.Count; i++)
+            {
+                var maxTime = times[i];
+                var recordDistance = distances[i];
+                var winCount = 0;
+
+                for (int t = 0; t <= maxTime; t++)
+                {
+                    var myDistance = (1 * t) * (maxTime - t);
+                    if (myDistance > recordDistance)
+                    {
+                        winCount++;
+                    }
+                }
+                marginForError *= winCount;
+            }
+
+            return marginForError.ToString();
+        }
+
+        public string Solve_06_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var allowedTime = double.Parse(input.Split("\n").First().Split(":").Last().Replace(" ", "").Trim());
+            var recordDistance = double.Parse(input.Split("\n").Last().Split(":").Last().Replace(" ", "").Trim());
+
+            var minTime = 0.0;
+            var maxTime = allowedTime;
+            for (double t = 0; t <= allowedTime; t++)
+            {
+                var myDistance = (1 * t) * (allowedTime - t);
+                if (myDistance > recordDistance)
+                {
+                    minTime = t;
+                    break;
+                }
+            }
+
+            for (double t = allowedTime; t >= 0; t--)
+            {
+                var myDistance = (1 * t) * (allowedTime - t);
+                if (myDistance > recordDistance)
+                {
+                    maxTime = t;
+                    break;
+                }
+            }
+
+            return (maxTime - minTime + 1).ToString();
         }
     }
 }
