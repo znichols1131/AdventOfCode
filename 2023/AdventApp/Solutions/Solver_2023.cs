@@ -457,5 +457,217 @@ namespace NewAdventApp
 
             return sum.ToString();
         }
+
+        public string Solve_05_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var seeds = input.Split("seeds:").Last().Split("\n").First().Trim().Split(" ").Select(s => s.Trim()).ToList();
+            var locations = new List<string>();
+
+            var seedToSoilMap = Day05_GetMapForType("seed-to-soil map:", "soil-to-fertilizer map:", input);
+            var soilToFertilizerMap = Day05_GetMapForType("soil-to-fertilizer map:", "fertilizer-to-water map:", input);
+            var fertilizerToWaterMap = Day05_GetMapForType("fertilizer-to-water map:", "water-to-light map:", input);
+            var waterToLightMap = Day05_GetMapForType("water-to-light map:", "light-to-temperature map:", input);
+            var lightToTemperatureMap = Day05_GetMapForType("light-to-temperature map:", "temperature-to-humidity map:", input);
+            var temperatureToHumidityMap = Day05_GetMapForType("temperature-to-humidity map:", "humidity-to-location map:", input);
+            var humidityToLocationMap = Day05_GetMapForType("humidity-to-location map:", "end-of-file", input);
+
+            // _logger.LogInformation($"fertilizerToWaterMap:\n{Day05_MapToString(soilToFertilizerMap)}");
+
+            foreach (var seed in seeds)
+            {
+                var soil = Day05_A_UseMap(seedToSoilMap, seed);
+                var fertilizer = Day05_A_UseMap(soilToFertilizerMap, soil);
+                var water = Day05_A_UseMap(fertilizerToWaterMap, fertilizer);
+                var light = Day05_A_UseMap(waterToLightMap, water);
+                var temperature = Day05_A_UseMap(lightToTemperatureMap, light);
+                var humidity = Day05_A_UseMap(temperatureToHumidityMap, temperature);
+                var location = Day05_A_UseMap(humidityToLocationMap, humidity);
+
+                locations.Add(location);
+                _logger.LogWarning($"{seed} -> {soil} -> {fertilizer} -> {water} -> {light} -> {temperature} -> {humidity} -> {location}");
+            }
+
+            return locations.Min(l => double.Parse(l)).ToString();
+        }
+
+        public Dictionary<(string, string), string> Day05_GetMapForType(string mapName, string nextMapName, string input)
+        {
+            var mapInput = input.Split(mapName).Last().Split(nextMapName).First().Replace("\n\n", "\n");
+            var output = new Dictionary<(string, string), string>();
+
+            foreach (var line in mapInput.Split("\n"))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var destinationRangeStart = double.Parse(line.Split(" ")[0]);
+                var sourceRangeStart = double.Parse(line.Split(" ")[1]);
+                var rangeLength = double.Parse(line.Split(" ")[2]);
+
+                var sourceRange = (sourceRangeStart.ToString("G0"), (sourceRangeStart + rangeLength - 1).ToString("G0"));
+                var modifier = (destinationRangeStart - sourceRangeStart).ToString("G0");
+
+                output.Add(sourceRange, modifier);
+            }
+
+            return output;
+        }
+
+        public string Day05_A_UseMap(Dictionary<(string, string), string> map, string input)
+        {
+            var inputValue = double.Parse(input);
+            if (map.Keys.Any(k => !string.IsNullOrWhiteSpace(k.Item1) && !string.IsNullOrWhiteSpace(k.Item2) && double.Parse(k.Item1) <= inputValue && inputValue <= double.Parse(k.Item2)))
+            {
+                var key = map.Keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(k.Item1) && !string.IsNullOrWhiteSpace(k.Item2) && double.Parse(k.Item1) <= inputValue && inputValue <= double.Parse(k.Item2));
+                var modifier = double.Parse(map[key]);
+                return (inputValue += modifier).ToString("G0");
+            }
+
+            return input;
+        }
+
+        public List<(string, string)> Day05_B_UseMap(Dictionary<(string, string), string> map, (string, string) input, string mapName)
+        {
+            var outputs = new List<(string, string)>();
+            var lowerBound = Math.Min(double.Parse(input.Item1), double.Parse(input.Item2));
+            var upperBound = Math.Max(double.Parse(input.Item1), double.Parse(input.Item2));
+
+            if (map.Keys.Any(k => !string.IsNullOrWhiteSpace(k.Item1) && !string.IsNullOrWhiteSpace(k.Item2) &&
+                                ((lowerBound <= double.Parse(k.Item1) && double.Parse(k.Item1) <= upperBound) ||
+                                (lowerBound <= double.Parse(k.Item2) && double.Parse(k.Item2) <= upperBound)) ||
+                                (double.Parse(k.Item1) < lowerBound && upperBound < double.Parse(k.Item2)) ||
+                                (double.Parse(k.Item2) < lowerBound && upperBound < double.Parse(k.Item1))))
+            {
+                var keys = map.Keys.Where(k => !string.IsNullOrWhiteSpace(k.Item1) && !string.IsNullOrWhiteSpace(k.Item2) &&
+                                ((lowerBound <= double.Parse(k.Item1) && double.Parse(k.Item1) <= upperBound) ||
+                                (lowerBound <= double.Parse(k.Item2) && double.Parse(k.Item2) <= upperBound)) ||
+                                (double.Parse(k.Item1) < lowerBound && upperBound < double.Parse(k.Item2)) ||
+                                (double.Parse(k.Item2) < lowerBound && upperBound < double.Parse(k.Item1)))
+                                .OrderBy(k => k.Item1)
+                                .ToList();
+
+                foreach (var key in keys)
+                {
+                    var modifier = double.Parse(map[key]);
+                    var lowerKey = Math.Min(double.Parse(key.Item1), double.Parse(key.Item2));
+                    var upperKey = Math.Max(double.Parse(key.Item1), double.Parse(key.Item2));
+
+                    var lowerValue = Math.Max(lowerKey, lowerBound);
+                    var upperValue = Math.Min(upperKey, upperBound);
+
+
+                    outputs.Add(((lowerValue += modifier).ToString("G0"), (upperValue += modifier).ToString("G0")));
+                }
+
+                if (lowerBound < keys.Min(k => Math.Min(double.Parse(k.Item1), double.Parse(k.Item2))))
+                {
+                    var value = keys.Min(k => Math.Min(double.Parse(k.Item1), double.Parse(k.Item2)));
+                    outputs.Add(((lowerBound).ToString("N0"), (value - 1).ToString("N0")));
+                }
+
+                if (upperBound > keys.Max(k => Math.Max(double.Parse(k.Item1), double.Parse(k.Item2))))
+                {
+                    var value = keys.Max(k => Math.Max(double.Parse(k.Item1), double.Parse(k.Item2)));
+                    outputs.Add(((value + 1).ToString("N0"), (upperBound).ToString("N0")));
+                }
+
+                if (keys.Count() > 1)
+                {
+                    for (int k = 0; k < keys.Count() - 1; k++)
+                    {
+                        var firstRangeTop = double.Parse(keys[k].Item2);
+                        var secondRangeBottom = double.Parse(keys[k + 1].Item1);
+                        if (firstRangeTop + 1 < secondRangeBottom)
+                        {
+                            outputs.Add(((firstRangeTop + 1).ToString("N0"), (secondRangeBottom - 1).ToString("N0")));
+                        }
+                    }
+                }
+
+                return outputs;
+            }
+
+            return new List<(string, string)>() { input };
+        }
+
+        public string Day05_MapToString(Dictionary<(string, string), string> map)
+        {
+            var output = "";
+            foreach (var key in map.Keys)
+            {
+                output += $"{key.Item1} to {key.Item2} => modify by {map[key]}\n";
+            }
+            return output;
+        }
+
+        public string Solve_05_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var seedInfo = input.Split("seeds:").Last().Split("\n").First().Trim().Split(" ").Select(s => s.Trim()).ToList();
+            var seeds = new List<(string, string)>();
+            for (int i = 0; i < seedInfo.Count; i += 2)
+            {
+                var startSeed = double.Parse(seedInfo[i]);
+                var count = double.Parse(seedInfo[i + 1]);
+                seeds.Add((startSeed.ToString("N0"), (startSeed + count - 1).ToString("N0")));
+            }
+
+            var seedToSoilMap = Day05_GetMapForType("seed-to-soil map:", "soil-to-fertilizer map:", input);
+            var soilToFertilizerMap = Day05_GetMapForType("soil-to-fertilizer map:", "fertilizer-to-water map:", input);
+            var fertilizerToWaterMap = Day05_GetMapForType("fertilizer-to-water map:", "water-to-light map:", input);
+            var waterToLightMap = Day05_GetMapForType("water-to-light map:", "light-to-temperature map:", input);
+            var lightToTemperatureMap = Day05_GetMapForType("light-to-temperature map:", "temperature-to-humidity map:", input);
+            var temperatureToHumidityMap = Day05_GetMapForType("temperature-to-humidity map:", "humidity-to-location map:", input);
+            var humidityToLocationMap = Day05_GetMapForType("humidity-to-location map:", "end-of-file", input);
+
+            var soils = new List<(string, string)>();
+            foreach (var seed in seeds)
+            {
+                soils.AddRange(Day05_B_UseMap(seedToSoilMap, seed, "seedToSoilMap"));
+            }
+
+            var fertilizers = new List<(string, string)>();
+            foreach (var soil in soils)
+            {
+                fertilizers.AddRange(Day05_B_UseMap(soilToFertilizerMap, soil, "soilToFertilizerMap"));
+            }
+
+            var waters = new List<(string, string)>();
+            foreach (var fertilizer in fertilizers)
+            {
+                waters.AddRange(Day05_B_UseMap(fertilizerToWaterMap, fertilizer, "fertilizerToWaterMap"));
+            }
+
+            var lights = new List<(string, string)>();
+            foreach (var water in waters)
+            {
+                lights.AddRange(Day05_B_UseMap(waterToLightMap, water, "waterToLightMap"));
+            }
+
+            var temperatures = new List<(string, string)>();
+            foreach (var light in lights)
+            {
+                temperatures.AddRange(Day05_B_UseMap(lightToTemperatureMap, light, "lightToTemperatureMap"));
+            }
+
+            var humidities = new List<(string, string)>();
+            foreach (var temperature in temperatures)
+            {
+                humidities.AddRange(Day05_B_UseMap(temperatureToHumidityMap, temperature, "temperatureToHumidityMap"));
+            }
+
+            var locations = new List<(string, string)>();
+            foreach (var humidity in humidities)
+            {
+                locations.AddRange(Day05_B_UseMap(humidityToLocationMap, humidity, "humidityToLocationMap"));
+            }
+
+            return locations.Min(l => Math.Min(double.Parse(l.Item1), double.Parse(l.Item2))).ToString();
+        }
     }
 }
