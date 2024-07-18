@@ -746,5 +746,183 @@ namespace NewAdventApp
 
             return (maxTime - minTime + 1).ToString();
         }
+
+        public string Solve_07_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var handBetScores = new List<(string, double, int)>();
+            foreach (var line in input.Split("\n"))
+            {
+                var hand = line.Split(" ").First();
+                var bet = double.Parse(line.Split(" ").Last());
+                var score = ScoreHand(hand);
+                handBetScores.Add((hand, bet, score));
+            }
+
+            handBetScores = handBetScores.OrderByDescending(h => h.Item3)
+                        .ThenByDescending(h => GetCardValue(h.Item1[0]))
+                        .ThenByDescending(h => GetCardValue(h.Item1[1]))
+                        .ThenByDescending(h => GetCardValue(h.Item1[2]))
+                        .ThenByDescending(h => GetCardValue(h.Item1[3]))
+                        .ThenByDescending(h => GetCardValue(h.Item1[4]))
+                        .Reverse()
+                        .ToList();
+
+            var winnings = 0.0;
+            var results = "";
+            for (int i = 1; i <= handBetScores.Count; i++)
+            {
+                var newWinnings = i * handBetScores[i - 1].Item2;
+                results += $"\n{i}\t{handBetScores[i - 1].Item1}\t({handBetScores[i - 1].Item3})\t\tBet {handBetScores[i - 1].Item2} ({newWinnings})";
+                winnings += newWinnings;
+            }
+            _logger.LogInformation(results);
+            return winnings.ToString();
+        }
+
+        private int ScoreHand(string hand)
+        {
+            if (CheckForFiveOfKind(hand))
+            {
+                return 5000;
+            }
+            else if (CheckForFourOfKind(hand))
+            {
+                return 2000;
+            }
+            else if (CheckForFullHouse(hand))
+            {
+                return 1000;
+            }
+            else if (CheckForThreeOfKind(hand))
+            {
+                return 500;
+            }
+            else if (CheckForTwoPair(hand))
+            {
+                return 200;
+            }
+            else if (CheckForPair(hand))
+            {
+                return 100;
+            }
+            else
+            {
+                return GetHighCard(hand);
+            }
+        }
+
+        private string GetUniqueCards(string hand)
+        {
+            return string.Join("", hand.Distinct().ToList());
+        }
+
+        private int GetNumberOfOccurencesOfCard(string hand, char card)
+        {
+            return hand.Where(h => h == card).Count();
+        }
+
+        private bool CheckForFiveOfKind(string hand)
+        {
+            return GetUniqueCards(hand).Length == 1;
+        }
+
+        private bool CheckForFourOfKind(string hand)
+        {
+            var uniqueHand = GetUniqueCards(hand);
+            return uniqueHand.Length == 2 &&
+                    (GetNumberOfOccurencesOfCard(hand, uniqueHand[0]) == 4 || GetNumberOfOccurencesOfCard(hand, uniqueHand[1]) == 4);
+        }
+
+        private bool CheckForFullHouse(string hand)
+        {
+            var uniqueHand = GetUniqueCards(hand);
+            return uniqueHand.Length == 2 &&
+                    ((GetNumberOfOccurencesOfCard(hand, uniqueHand[0]) == 3 && GetNumberOfOccurencesOfCard(hand, uniqueHand[1]) == 2) ||
+                    (GetNumberOfOccurencesOfCard(hand, uniqueHand[0]) == 2 && GetNumberOfOccurencesOfCard(hand, uniqueHand[1]) == 3));
+        }
+
+        private bool CheckForThreeOfKind(string hand)
+        {
+            var uniqueHand = GetUniqueCards(hand);
+            return uniqueHand.Length == 3 &&
+                    (GetNumberOfOccurencesOfCard(hand, uniqueHand[0]) == 3 || GetNumberOfOccurencesOfCard(hand, uniqueHand[1]) == 3 || GetNumberOfOccurencesOfCard(hand, uniqueHand[2]) == 3);
+        }
+
+        private int GetNumberOfPairs(string hand)
+        {
+            var uniqueHand = GetUniqueCards(hand);
+            if (uniqueHand.Length == 5)
+            {
+                return 0;
+            }
+
+            var numberOfPairs = 0;
+            foreach (var card in uniqueHand)
+            {
+                if (GetNumberOfOccurencesOfCard(hand, card) == 2)
+                {
+                    numberOfPairs++;
+                }
+            }
+            return numberOfPairs;
+        }
+
+        private bool CheckForTwoPair(string hand)
+        {
+            return GetNumberOfPairs(hand) == 2;
+        }
+
+        private bool CheckForPair(string hand)
+        {
+            return GetNumberOfPairs(hand) == 1;
+        }
+
+        private int GetCardValue(char card)
+        {
+            if (char.IsDigit(card))
+            {
+                return int.Parse(card.ToString());
+            }
+
+            switch (card)
+            {
+                case 'A':
+                    return 14;
+                case 'K':
+                    return 13;
+                case 'Q':
+                    return 12;
+                case 'J':
+                    return 11;
+                case 'T':
+                    return 10;
+                default:
+                    return 0;
+            }
+        }
+
+        private int GetHighCard(string hand)
+        {
+            char highestCard = hand[0];
+            for (int i = 1; i < hand.Length; i++)
+            {
+                if (GetCardValue(highestCard) < GetCardValue(hand[i]))
+                {
+                    highestCard = hand[i];
+                }
+            }
+            return GetCardValue(highestCard);
+        }
+
+        public string Solve_07_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+
+
+            return "";
+        }
     }
 }

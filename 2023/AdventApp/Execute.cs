@@ -77,6 +77,10 @@ namespace NewAdventApp
                     return solver.Solve_06_A();
                 case "6-B":
                     return solver.Solve_06_B();
+                case "7-A":
+                    return solver.Solve_07_A();
+                case "7-B":
+                    return solver.Solve_07_B();
                 default:
                     throw new Exception("Invalid day/part.");
             }
