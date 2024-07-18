@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
@@ -921,6 +922,114 @@ namespace NewAdventApp
             var input = GetInputForFileAsString(_filename);
 
 
+
+            return "";
+        }
+
+        public string Solve_08_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var instructions = input.Split("\n").First().Trim();
+            var map = new Dictionary<string, (string, string)>();
+
+            input = input.Replace(instructions, "").Trim();
+            foreach (var line in input.Split("\n"))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var key = line.Split("=").First().Trim();
+                var left = line.Split("(").Last().Split(",").First().Trim();
+                var right = line.Split(", ").Last().Split(")").First().Trim();
+                map.Add(key, (left, right));
+            }
+
+            var currentNode = "AAA";
+            var targetNode = "ZZZ";
+            var stepsTaken = 0;
+            var currentDirection = stepsTaken % instructions.Length;
+            while (currentNode != targetNode)
+            {
+                var nextDirection = instructions[currentDirection];
+                var currentMap = map[currentNode];
+                var nextNode = nextDirection == 'L' ? currentMap.Item1 : currentMap.Item2;
+
+                currentNode = nextNode;
+                stepsTaken++;
+                currentDirection = stepsTaken % instructions.Length;
+            }
+
+            return stepsTaken.ToString();
+        }
+
+        public string Solve_08_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var instructions = input.Split("\n").First().Trim();
+            var map = new Dictionary<string, (string, string)>();
+
+            input = input.Replace(instructions, "").Trim();
+            foreach (var line in input.Split("\n"))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var key = line.Split("=").First().Trim();
+                var left = line.Split("(").Last().Split(",").First().Trim();
+                var right = line.Split(", ").Last().Split(")").First().Trim();
+                map.Add(key, (left, right));
+            }
+
+            var currentNodes = new List<string>();
+            foreach (var key in map.Keys.Where(k => k.EndsWith('A')))
+            {
+                _logger.LogInformation($"Starting at node {key}.");
+                currentNodes.Add(key);
+            }
+
+            var phaseFrequencies = new List<(int, int)>();
+            foreach (var node in currentNodes)
+            {
+                var currentNode = node;
+                var stepsTaken = 0;
+                var currentDirection = stepsTaken % instructions.Length;
+                while (!currentNode.EndsWith('Z'))
+                {
+                    var nextDirection = instructions[currentDirection];
+                    var currentMap = map[currentNode];
+                    var nextNode = nextDirection == 'L' ? currentMap.Item1 : currentMap.Item2;
+
+                    currentNode = nextNode;
+                    stepsTaken++;
+                    currentDirection = stepsTaken % instructions.Length;
+                }
+
+                var firstSuccess = stepsTaken;
+
+                do
+                {
+                    var nextDirection = instructions[currentDirection];
+                    var currentMap = map[currentNode];
+                    var nextNode = nextDirection == 'L' ? currentMap.Item1 : currentMap.Item2;
+
+                    currentNode = nextNode;
+                    stepsTaken++;
+                    currentDirection = stepsTaken % instructions.Length;
+                } while (!currentNode.EndsWith('Z'));
+
+                var secondSuccess = stepsTaken;
+                phaseFrequencies.Add((firstSuccess, secondSuccess - firstSuccess));
+            }
+
+            _logger.LogInformation($"Frequencies:\n" + string.Join("\n", phaseFrequencies.Select(p => $"{p.Item1} + t * {p.Item2}")));
+
+            // Use Excel to get LCM based on frequencies
 
             return "";
         }
