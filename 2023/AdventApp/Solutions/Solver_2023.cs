@@ -1033,5 +1033,101 @@ namespace NewAdventApp
 
             return "";
         }
+
+        public string Solve_09_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var sum = 0.0;
+            foreach (var line in input.Split("\n"))
+            {
+                var numbers = new List<List<double>>
+                {
+                    line.Split(" ").Select(x => double.Parse(x)).ToList()
+                };
+
+                var doneFindingDifferences = false;
+                var previousRow = numbers[0];
+                while (!doneFindingDifferences)
+                {
+                    var differences = GetDifferences(previousRow);
+                    numbers.Add(differences);
+                    previousRow = differences;
+                    doneFindingDifferences = differences.All(d => d == 0.0);
+                }
+
+                var previousDifference = 0.0;
+                for (int i = numbers.Count - 2; i >= 0; i--)
+                {
+                    numbers[i] = ExtrapolateRowForward(numbers[i], previousDifference);
+                    previousDifference = numbers[i].Last();
+                }
+
+                _logger.LogInformation(string.Join("\n", numbers.Select(n => string.Join(" ", n))));
+
+                sum += previousDifference;
+            }
+
+            return sum.ToString();
+        }
+
+        public List<double> GetDifferences(List<double> input)
+        {
+            var output = new List<double>();
+            for (int i = 1; i < input.Count; i++)
+            {
+                output.Add(input[i] - input[i - 1]);
+            }
+            return output;
+        }
+
+        public List<double> ExtrapolateRowForward(List<double> row, double nextDifference)
+        {
+            row.Add(row.Last() + nextDifference);
+            return row;
+        }
+
+        public List<double> ExtrapolateRowBackwards(List<double> row, double nextDifference)
+        {
+            row.Insert(0, row.First() - nextDifference);
+            return row;
+        }
+
+        public string Solve_09_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var sum = 0.0;
+            foreach (var line in input.Split("\n"))
+            {
+                var numbers = new List<List<double>>
+                {
+                    line.Split(" ").Select(x => double.Parse(x)).ToList()
+                };
+
+                var doneFindingDifferences = false;
+                var previousRow = numbers[0];
+                while (!doneFindingDifferences)
+                {
+                    var differences = GetDifferences(previousRow);
+                    numbers.Add(differences);
+                    previousRow = differences;
+                    doneFindingDifferences = differences.All(d => d == 0.0);
+                }
+
+                var previousDifference = 0.0;
+                for (int i = numbers.Count - 2; i >= 0; i--)
+                {
+                    numbers[i] = ExtrapolateRowBackwards(numbers[i], previousDifference);
+                    previousDifference = numbers[i].First();
+                }
+
+                _logger.LogInformation(string.Join("\n", numbers.Select(n => string.Join(" ", n))));
+
+                sum += previousDifference;
+            }
+
+            return sum.ToString();
+        }
     }
 }
