@@ -1586,5 +1586,162 @@ namespace NewAdventApp
             path = Regex.Replace(Regex.Replace(path, "F-*7|L-*J", string.Empty), "F-*J|L-*7", "|");
             return path.Count(x => x == '|');
         }
+
+        public string Solve_11_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var map = input.Split("\n").ToList();
+            var expandedMap = ExpandMap(map);
+
+            var galaxies = new List<(int, int)>();
+            for (int r = 0; r < expandedMap.Count; r++)
+            {
+                for (int c = 0; c < expandedMap[r].Length; c++)
+                {
+                    if (expandedMap[r][c] == '#')
+                    {
+                        galaxies.Add((r, c));
+                    }
+                }
+            }
+
+            int sum = 0;
+            List<string> logs = new List<string>();
+            for (int a = 0; a < galaxies.Count; a++)
+            {
+                for (int b = a + 1; b < galaxies.Count; b++)
+                {
+                    var distance = GetDistanceBetweenGalaxies(galaxies[a], galaxies[b]);
+                    logs.Add($"({galaxies[a].Item1}, {galaxies[a].Item2}) to ({galaxies[b].Item1}, {galaxies[b].Item2}) = {distance}");
+                    sum += distance;
+                }
+            }
+
+            return sum.ToString();
+        }
+
+        private int GetDistanceBetweenGalaxies((int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy)
+        {
+            return Math.Abs(firstGalaxy.Row - secondGalaxy.Row) + Math.Abs(firstGalaxy.Column - secondGalaxy.Column);
+        }
+
+        private double GetDistanceBetweenGalaxies_PartB(List<string> map, (int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy, double factor)
+        {
+            var verticalExpansions = 0;
+            for (int r = Math.Min(firstGalaxy.Row, secondGalaxy.Row); r < Math.Max(firstGalaxy.Row, secondGalaxy.Row); r++)
+            {
+                if (map[r].Trim().All(x => x == 'X'))
+                {
+                    verticalExpansions++;
+                }
+            }
+
+            var horizontalExpansion = 0;
+            for (int c = Math.Min(firstGalaxy.Column, secondGalaxy.Column); c < Math.Max(firstGalaxy.Column, secondGalaxy.Column); c++)
+            {
+                if (map[0][c] == 'X')
+                {
+                    horizontalExpansion++;
+                }
+            }
+
+            return Math.Abs(firstGalaxy.Row - secondGalaxy.Row) + verticalExpansions * (factor - 1.0)
+                    + Math.Abs(firstGalaxy.Column - secondGalaxy.Column) + horizontalExpansion * (factor - 1.0);
+        }
+
+        private List<string> ExpandMap(List<string> map)
+        {
+            var expandedMap = map;
+            for (int r = 0; r < expandedMap.Count; r++)
+            {
+                if (!expandedMap[r].Trim().Any(x => x != '.'))
+                {
+                    _logger.LogWarning($"Expanding galaxy vertically");
+                    expandedMap.Insert(r, expandedMap[r]);
+                    r++;
+                }
+            }
+
+            for (int c = 0; c < expandedMap[0].Trim().Length; c++)
+            {
+                var column = expandedMap.Select(row => row[c]);
+                if (!column.Any(x => x != '.'))
+                {
+                    _logger.LogWarning($"Expanding galaxy horizontally");
+                    for (int r = 0; r < expandedMap.Count; r++)
+                    {
+                        expandedMap[r] = expandedMap[r].Insert(c, ".");
+                    }
+                    c++;
+                }
+            }
+            return expandedMap;
+        }
+
+        private List<string> ExpandMap_PartB(List<string> map)
+        {
+            var expandedMap = map;
+            for (int r = 0; r < expandedMap.Count; r++)
+            {
+                if (!expandedMap[r].Trim().Any(x => !".X".Contains(x)))
+                {
+                    _logger.LogWarning($"Expanding galaxy vertically by factor of X");
+                    expandedMap[r] = expandedMap[r].Replace(".", "X");
+                }
+            }
+
+            for (int c = 0; c < expandedMap[0].Trim().Length; c++)
+            {
+                var column = expandedMap.Select(row => row[c]);
+                if (!column.Any(x => !".X".Contains(x)))
+                {
+                    _logger.LogWarning($"Expanding galaxy horizontally by a factor of X");
+                    for (int r = 0; r < expandedMap.Count; r++)
+                    {
+                        expandedMap[r] = expandedMap[r].Remove(c, 1).Insert(c, "X");
+                    }
+                    c++;
+                }
+            }
+            return expandedMap;
+        }
+
+        public string Solve_11_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            var map = input.Split("\n").ToList();
+            var expandedMap = ExpandMap_PartB(map);
+
+            var galaxies = new List<(int, int)>();
+            for (int r = 0; r < expandedMap.Count; r++)
+            {
+                for (int c = 0; c < expandedMap[r].Length; c++)
+                {
+                    if (expandedMap[r][c] == '#')
+                    {
+                        galaxies.Add((r, c));
+                    }
+                }
+            }
+
+            double sum = 0.0;
+            List<string> logs = new List<string>();
+            for (int a = 0; a < galaxies.Count; a++)
+            {
+                for (int b = a + 1; b < galaxies.Count; b++)
+                {
+                    var distance = GetDistanceBetweenGalaxies_PartB(expandedMap, galaxies[a], galaxies[b], 1000000.0);
+                    logs.Add($"({galaxies[a].Item1}, {galaxies[a].Item2}) to ({galaxies[b].Item1}, {galaxies[b].Item2}) = {distance}");
+                    sum += distance;
+                }
+            }
+
+            _logger.LogInformation(string.Join("\n", expandedMap));
+            Thread.Sleep(2000);
+
+            return sum.ToString();
+        }
     }
 }
