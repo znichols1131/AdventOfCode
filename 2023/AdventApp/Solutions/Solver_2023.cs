@@ -1050,7 +1050,7 @@ namespace NewAdventApp
                 var previousRow = numbers[0];
                 while (!doneFindingDifferences)
                 {
-                    var differences = GetDifferences(previousRow);
+                    var differences = Day_09_GetDifferences(previousRow);
                     numbers.Add(differences);
                     previousRow = differences;
                     doneFindingDifferences = differences.All(d => d == 0.0);
@@ -1059,7 +1059,7 @@ namespace NewAdventApp
                 var previousDifference = 0.0;
                 for (int i = numbers.Count - 2; i >= 0; i--)
                 {
-                    numbers[i] = ExtrapolateRowForward(numbers[i], previousDifference);
+                    numbers[i] = Day_09_ExtrapolateRowForward(numbers[i], previousDifference);
                     previousDifference = numbers[i].Last();
                 }
 
@@ -1071,7 +1071,7 @@ namespace NewAdventApp
             return sum.ToString();
         }
 
-        public List<double> GetDifferences(List<double> input)
+        public List<double> Day_09_GetDifferences(List<double> input)
         {
             var output = new List<double>();
             for (int i = 1; i < input.Count; i++)
@@ -1081,13 +1081,13 @@ namespace NewAdventApp
             return output;
         }
 
-        public List<double> ExtrapolateRowForward(List<double> row, double nextDifference)
+        public List<double> Day_09_ExtrapolateRowForward(List<double> row, double nextDifference)
         {
             row.Add(row.Last() + nextDifference);
             return row;
         }
 
-        public List<double> ExtrapolateRowBackwards(List<double> row, double nextDifference)
+        public List<double> Day_09_ExtrapolateRowBackwards(List<double> row, double nextDifference)
         {
             row.Insert(0, row.First() - nextDifference);
             return row;
@@ -1109,7 +1109,7 @@ namespace NewAdventApp
                 var previousRow = numbers[0];
                 while (!doneFindingDifferences)
                 {
-                    var differences = GetDifferences(previousRow);
+                    var differences = Day_09_GetDifferences(previousRow);
                     numbers.Add(differences);
                     previousRow = differences;
                     doneFindingDifferences = differences.All(d => d == 0.0);
@@ -1118,7 +1118,7 @@ namespace NewAdventApp
                 var previousDifference = 0.0;
                 for (int i = numbers.Count - 2; i >= 0; i--)
                 {
-                    numbers[i] = ExtrapolateRowBackwards(numbers[i], previousDifference);
+                    numbers[i] = Day_09_ExtrapolateRowBackwards(numbers[i], previousDifference);
                     previousDifference = numbers[i].First();
                 }
 
@@ -1128,6 +1128,463 @@ namespace NewAdventApp
             }
 
             return sum.ToString();
+        }
+
+        private List<string> _pipeMap = new List<string>();
+        private List<List<int>> _pipeMapDistances = new List<List<int>>();
+        public string Solve_10_A()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            _pipeMap = input.Split("\n").ToList();
+            Day_10_RemoveExtraneousPipes();
+
+            foreach (var row in _pipeMap)
+            {
+                var distanceRow = new List<int>();
+                foreach (var column in row)
+                {
+                    distanceRow.Add(-1);
+                }
+                _pipeMapDistances.Add(distanceRow);
+            }
+
+            var startingRow = _pipeMap.FindIndex(r => r.Contains("S"));
+            var startingColumn = _pipeMap[startingRow].IndexOf("S");
+            _pipeMapDistances[startingRow][startingColumn] = 0;
+            _logger.LogInformation($"Starting at coordinate ({startingRow}, {startingColumn})");
+            // _logger.LogInformation(string.Join("\n", _pipeMap));
+
+            if (Day_10_PipeAboveIsValid(startingRow, startingColumn))
+            {
+                _logger.LogInformation("Following pipe to top...");
+                Day_10_FollowPipe(Day_10_Direction.Up, startingRow - 1, startingColumn, 0);
+                _logger.LogInformation("Done following pipe to top.");
+            }
+            if (Day_10_PipeToRightIsValid(startingRow, startingColumn))
+            {
+                _logger.LogInformation("Following pipe to right...");
+                Day_10_FollowPipe(Day_10_Direction.Right, startingRow, startingColumn + 1, 0);
+                _logger.LogInformation("Done following pipe to right.");
+            }
+            if (Day_10_PipeBelowIsValid(startingRow, startingColumn))
+            {
+                _logger.LogInformation("Following pipe below...");
+                Day_10_FollowPipe(Day_10_Direction.Down, startingRow + 1, startingColumn, 0);
+                _logger.LogInformation("Done following pipe below.");
+            }
+            if (Day_10_PipeToLeftIsValid(startingRow, startingColumn))
+            {
+                _logger.LogInformation("Following pipe to right...");
+                Day_10_FollowPipe(Day_10_Direction.Left, startingRow, startingColumn - 1, 0);
+                _logger.LogInformation("Done following pipe to right.");
+            }
+
+            var maxDistance = _pipeMapDistances.SelectMany(r => r.Where(d => d < int.MaxValue && d >= 0)).Max();
+            var maxDistanceRow = _pipeMapDistances.FindIndex(r => r.Contains(maxDistance));
+            var maxDistanceColumn = _pipeMapDistances[maxDistanceRow].IndexOf(maxDistance);
+            _logger.LogInformation($"Ending at coordinate ({maxDistanceRow}, {maxDistanceColumn})");
+
+            return maxDistance.ToString();
+        }
+
+        private void Day_10_RemoveExtraneousPipes()
+        {
+            var complete = false;
+            while (!complete)
+            {
+                complete = true;
+                var modifiedMap = new List<string>();
+                for (int r = 0; r < _pipeMap.Count; r++)
+                {
+                    var modifiedRow = "";
+                    for (int c = 0; c < _pipeMap[r].Length; c++)
+                    {
+                        var pipe = _pipeMap[r][c];
+                        var modifiedPipe = Day_10_ModifyPipeIfNeeded(pipe, r, c);
+                        if (pipe != modifiedPipe)
+                        {
+                            // _logger.LogInformation($"Pipe {pipe} has been modified to {modifiedPipe}");
+                            complete = false;
+                        }
+                        modifiedRow += modifiedPipe;
+                    }
+                    modifiedMap.Add(modifiedRow);
+                }
+                _pipeMap = modifiedMap;
+            }
+
+        }
+
+        private char Day_10_ModifyPipeIfNeeded(char pipe, int row, int column)
+        {
+            // _logger.LogInformation($"Modifying pipe {pipe} at ({row}, {column})");
+            switch (pipe)
+            {
+                case '|':
+                    return Day_10_PipeAboveIsValid(row, column) && Day_10_PipeBelowIsValid(row, column) ? pipe : '.';
+                case '-':
+                    return Day_10_PipeToRightIsValid(row, column) && Day_10_PipeToLeftIsValid(row, column) ? pipe : '.';
+                case 'L':
+                    return Day_10_PipeAboveIsValid(row, column) && Day_10_PipeToRightIsValid(row, column) ? pipe : '.';
+                case 'J':
+                    return Day_10_PipeAboveIsValid(row, column) && Day_10_PipeToLeftIsValid(row, column) ? pipe : '.';
+                case '7':
+                    return Day_10_PipeBelowIsValid(row, column) && Day_10_PipeToLeftIsValid(row, column) ? pipe : '.';
+                case 'F':
+                    return Day_10_PipeBelowIsValid(row, column) && Day_10_PipeToRightIsValid(row, column) ? pipe : '.';
+                default:
+                    return pipe;
+            }
+        }
+
+        private void Day_10_FollowPipe(Day_10_Direction wasHeadedInDirection, int row, int column, int previousDistance)
+        {
+            Day_10_Direction nextDirection = wasHeadedInDirection;
+            int currentDistance = previousDistance + 1;
+
+            var complete = false;
+            while (!complete)
+            {
+                if (_pipeMap[row][column] == 'S' || (_pipeMapDistances[row][column] >= 0 && currentDistance >= _pipeMapDistances[row][column]))
+                {
+                    complete = true;
+                    continue;
+                }
+                _pipeMapDistances[row][column] = currentDistance;
+                wasHeadedInDirection = nextDirection;
+
+                var pipe = _pipeMap[row][column];
+                if (wasHeadedInDirection == Day_10_Direction.Up)
+                {
+                    switch (pipe)
+                    {
+                        case '|':
+                            nextDirection = Day_10_Direction.Up;
+                            break;
+                        case 'F':
+                            nextDirection = Day_10_Direction.Right;
+                            break;
+                        case '7':
+                            nextDirection = Day_10_Direction.Left;
+                            break;
+                    }
+                }
+                else if (wasHeadedInDirection == Day_10_Direction.Right)
+                {
+                    switch (pipe)
+                    {
+                        case '-':
+                            nextDirection = Day_10_Direction.Right;
+                            break;
+                        case '7':
+                            nextDirection = Day_10_Direction.Down;
+                            break;
+                        case 'J':
+                            nextDirection = Day_10_Direction.Up;
+                            break;
+                    }
+                }
+                else if (wasHeadedInDirection == Day_10_Direction.Down)
+                {
+                    switch (pipe)
+                    {
+                        case '|':
+                            nextDirection = Day_10_Direction.Down;
+                            break;
+                        case 'L':
+                            nextDirection = Day_10_Direction.Right;
+                            break;
+                        case 'J':
+                            nextDirection = Day_10_Direction.Left;
+                            break;
+                    }
+                }
+                else if (wasHeadedInDirection == Day_10_Direction.Left)
+                {
+                    switch (pipe)
+                    {
+                        case '-':
+                            nextDirection = Day_10_Direction.Left;
+                            break;
+                        case 'L':
+                            nextDirection = Day_10_Direction.Up;
+                            break;
+                        case 'F':
+                            nextDirection = Day_10_Direction.Down;
+                            break;
+                    }
+                }
+
+                row = row + (nextDirection == Day_10_Direction.Up ? -1 : 0) + (nextDirection == Day_10_Direction.Down ? 1 : 0);
+                column = column + (nextDirection == Day_10_Direction.Left ? -1 : 0) + (nextDirection == Day_10_Direction.Right ? 1 : 0);
+                currentDistance++;
+            }
+
+            _logger.LogWarning(string.Join("\n", _pipeMapDistances.Select(d => string.Join("\t", d))));
+        }
+
+        private enum Day_10_Direction
+        {
+            Up,
+            Right,
+            Down,
+            Left
+        }
+
+        private bool Day_10_PipeAboveIsValid(int row, int column)
+        {
+            var index = row - 1;
+            if (row == 0)
+            {
+                return false;
+            }
+
+            var pipeAbove = _pipeMap[index][column];
+            var acceptablePipesAbove = "|7FS";
+            if (!acceptablePipesAbove.Contains(pipeAbove))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool Day_10_PipeBelowIsValid(int row, int column)
+        {
+            if (row == _pipeMap.Count - 1)
+            {
+                return false;
+            }
+
+            var pipeBelow = _pipeMap[row + 1][column];
+            var acceptablePipesBelow = "|LJS";
+            if (!acceptablePipesBelow.Contains(pipeBelow))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool Day_10_PipeToRightIsValid(int row, int column)
+        {
+            if (column == _pipeMap[row].Length - 1)
+            {
+                return false;
+            }
+
+            var pipeToRight = _pipeMap[row][column + 1];
+            var acceptablePipesToRight = "-J7S";
+            if (!acceptablePipesToRight.Contains(pipeToRight))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool Day_10_PipeToLeftIsValid(int row, int column)
+        {
+            if (column == 0)
+            {
+                return false;
+            }
+
+            var pipeToLeft = _pipeMap[row][column - 1];
+            var acceptablePipesToLeft = "-LFS";
+            if (!acceptablePipesToLeft.Contains(pipeToLeft))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public string Solve_10_B()
+        {
+            var input = GetInputForFileAsString(_filename);
+
+            _pipeMap = input.Split("\n").Select(l => l.Trim()).ToList();
+            Day_10_RemoveExtraneousPipes();
+
+            var startingRow = _pipeMap.FindIndex(r => r.Contains("S"));
+            var startingColumn = _pipeMap[startingRow].IndexOf("S");
+            _logger.LogInformation($"Starting at coordinate ({startingRow}, {startingColumn})");
+            _logger.LogInformation(string.Join("\n", _pipeMap));
+
+            var completeLeftRight = false;
+            var completeTopBottom = false;
+            var topBound = 0;
+            var bottomBound = _pipeMap.Count - 1;
+            var leftBound = 0;
+            var rightBound = _pipeMap[bottomBound].Length - 1;
+            while (!completeLeftRight && !completeTopBottom)
+            {
+                for (int r = topBound; r <= bottomBound; r++)
+                {
+                    for (int c = leftBound; c <= rightBound; c++)
+                    {
+                        Day_10_ModifySpace(r, c);
+                    }
+                }
+
+                if (!completeTopBottom)
+                {
+                    topBound++;
+                    bottomBound--;
+                    completeTopBottom = topBound > bottomBound;
+                }
+
+                if (!completeLeftRight)
+                {
+                    leftBound++;
+                    rightBound--;
+                    completeLeftRight = leftBound > rightBound;
+                }
+            }
+
+            Thread.Sleep(2000);
+            _logger.LogInformation($"Updated map...\n" + string.Join("\n", _pipeMap));
+
+            var enclosedSpaces = _pipeMap.Sum(r => r.Count(p => p == '.'));
+
+            return enclosedSpaces.ToString();
+        }
+
+        private bool Day_10_ModifySpace(int row, int column)
+        {
+            var spaceIsNotEmpty = _pipeMap[row][column] != '.';
+            if (spaceIsNotEmpty)
+            {
+                return false;
+            }
+
+            var spaceIsOnBorder = row == 0 || column == 0 || row == _pipeMap.Count - 1 || column == _pipeMap[row].Trim().Length - 1;
+            if (spaceIsOnBorder)
+            {
+                _pipeMap[row] = _pipeMap[row].Remove(column, 1).Insert(column, "0");
+                return true;
+            }
+
+            if (Day_10_SomeSpaceAboveIsEmpty(row, column))
+            {
+                _pipeMap[row] = _pipeMap[row].Remove(column, 1).Insert(column, "0");
+                return true;
+            }
+
+            if (Day_10_SomeSpaceToLeftIsEmpty(row, column) || Day_10_SomeSpaceToRightIsEmpty(row, column))
+            {
+                _pipeMap[row] = _pipeMap[row].Remove(column, 1).Insert(column, "0");
+                return true;
+            }
+
+            if (Day_10_SomeSpaceBelowIsEmpty(row, column))
+            {
+                _pipeMap[row] = _pipeMap[row].Remove(column, 1).Insert(column, "0");
+                return true;
+            }
+
+            if (Day_10_IsOutsideLoop(row, column))
+            {
+                _pipeMap[row] = _pipeMap[row].Remove(column, 1).Insert(column, "0");
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool Day_10_SomeSpaceAboveIsEmpty(int startingRow, int startingColumn)
+        {
+            int row = startingRow;
+            int column = startingColumn;
+            var oneOrMoreSpacesAboveIsEmpty = _pipeMap[row - 1][column - 1] == '0' || _pipeMap[row - 1][column] == '0' || _pipeMap[row - 1][column + 1] == '0';
+            if (oneOrMoreSpacesAboveIsEmpty)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private bool Day_10_SomeSpaceBelowIsEmpty(int startingRow, int startingColumn)
+        {
+            int row = startingRow;
+            int column = startingColumn;
+            var oneOrMoreSpacesBelowIsEmpty = _pipeMap[row + 1][column - 1] == '0' || _pipeMap[row + 1][column] == '0' || _pipeMap[row + 1][column + 1] == '0';
+            if (oneOrMoreSpacesBelowIsEmpty)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private bool Day_10_SomeSpaceToLeftIsEmpty(int startingRow, int startingColumn)
+        {
+            int row = startingRow;
+            int column = startingColumn;
+            var oneOrMoreSpacesToLeftIsEmpty = _pipeMap[row][column - 1] == '0';
+            if (oneOrMoreSpacesToLeftIsEmpty)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool Day_10_SomeSpaceToRightIsEmpty(int startingRow, int startingColumn)
+        {
+            int row = startingRow;
+            int column = startingColumn;
+            var oneOrMoreSpacesToRightIsEmpty = _pipeMap[row][column + 1] == '0';
+            if (oneOrMoreSpacesToRightIsEmpty)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private bool Day_10_IsOutsideLoop(int row, int column)
+        {
+            return Day_10_CountWallsUp(row, column) % 2 == 0 ||
+                    Day_10_CountWallsDown(row, column) % 2 == 0 ||
+                    Day_10_CountWallsLeft(row, column) % 2 == 0 ||
+                    Day_10_CountWallsRight(row, column) % 2 == 0;
+        }
+
+        private int Day_10_CountWallsUp(int row, int column)
+        {
+            string path = "";
+            for (int r = 0; r < row; r++)
+            {
+                path += _pipeMap[r][column];
+            }
+            path = Regex.Replace(Regex.Replace(path, @"F\|*L|7\|*J", string.Empty), @"F\|*J|7\|*L", "-");
+            return path.Count(x => x == '-');
+        }
+
+        private int Day_10_CountWallsDown(int row, int column)
+        {
+            string path = "";
+            for (int r = row + 1; r < _pipeMap.Count; r++)
+            {
+                path += _pipeMap[r][column];
+            }
+            path = Regex.Replace(Regex.Replace(path, @"F\|*L|7\|*J", string.Empty), @"F\|*J|7\|*L", "-");
+            return path.Count(x => x == '-');
+        }
+
+        private int Day_10_CountWallsLeft(int row, int column)
+        {
+            var path = _pipeMap[row].Substring(0, column + 1);
+            path = Regex.Replace(Regex.Replace(path, "F-*7|L-*J", string.Empty), "F-*J|L-*7", "|");
+            return path.Count(x => x == '|');
+        }
+
+        private int Day_10_CountWallsRight(int row, int column)
+        {
+            var path = _pipeMap[row].Substring(column + 1);
+            path = Regex.Replace(Regex.Replace(path, "F-*7|L-*J", string.Empty), "F-*J|L-*7", "|");
+            return path.Count(x => x == '|');
         }
     }
 }
