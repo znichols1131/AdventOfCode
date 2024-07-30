@@ -1868,5 +1868,207 @@ namespace NewAdventApp
 
             return sum.ToString();
         }
+
+        public string Solve_14_A()
+        {
+            var dish = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            Day_14_PrintDish(dish);
+
+            var tiltedDish = Day_14_TiltDishNorth(dish);
+            var score = Day_14_ScoreDish(tiltedDish);
+
+            Day_14_PrintDish(tiltedDish);
+
+            return score.ToString();
+        }
+
+        public enum Day_14_Direction
+        {
+            West,
+            North,
+            East,
+            South
+        }
+
+        private void Day_14_PrintDish(List<string> dish)
+        {
+            _logger.LogInformation($"\n" + string.Join("\n", dish));
+            Thread.Sleep(1000);
+        }
+
+        public List<string> Day_14_TiltDishNorth(List<string> dish)
+        {
+            var tiltedDish = dish;
+            for (int r = 1; r < tiltedDish.Count; r++)
+            {
+                for (int c = 0; c < tiltedDish[r].Length; c++)
+                {
+                    if (tiltedDish[r][c] != 'O')
+                    {
+                        continue;
+                    }
+
+                    if (tiltedDish[r - 1][c] == '.')
+                    {
+                        int row = GetHighestEmptyRowIndex(tiltedDish, r - 1, c);
+                        tiltedDish[row] = tiltedDish[row].Remove(c, 1).Insert(c, "O");
+                        tiltedDish[r] = tiltedDish[r].Remove(c, 1).Insert(c, ".");
+                    }
+                }
+            }
+            return tiltedDish;
+        }
+
+        private int GetHighestEmptyRowIndex(List<string> dish, int startingRow, int column)
+        {
+            if (startingRow == 0)
+            {
+                return startingRow;
+            }
+            for (int r = startingRow - 1; r >= 0; r--)
+            {
+                if (dish[r][column] == '#' || dish[r][column] == 'O')
+                {
+                    return r + 1;
+                }
+                if (r == 0)
+                {
+                    return r;
+                }
+            }
+            return startingRow;
+        }
+
+        private int GetLowestEmptyRowIndex(List<string> dish, int startingRow, int column)
+        {
+            if (startingRow == dish.Count - 1)
+            {
+                return startingRow;
+            }
+            for (int r = startingRow + 1; r <= dish.Count - 1; r++)
+            {
+                if (dish[r][column] == '#' || dish[r][column] == 'O')
+                {
+                    return r - 1;
+                }
+                if (r == dish.Count - 1)
+                {
+                    return r;
+                }
+            }
+            return startingRow;
+        }
+
+        public List<string> Day_14_TiltDishSouth(List<string> dish)
+        {
+            var tiltedDish = dish;
+            for (int r = tiltedDish.Count - 2; r >= 0; r--)
+            {
+                for (int c = 0; c < tiltedDish[r].Length; c++)
+                {
+                    if (tiltedDish[r][c] != 'O')
+                    {
+                        continue;
+                    }
+
+                    if (tiltedDish[r + 1][c] == '.')
+                    {
+                        int row = GetLowestEmptyRowIndex(tiltedDish, r + 1, c);
+                        tiltedDish[row] = tiltedDish[row].Remove(c, 1).Insert(c, "O");
+                        tiltedDish[r] = tiltedDish[r].Remove(c, 1).Insert(c, ".");
+                    }
+                }
+            }
+            return tiltedDish;
+        }
+
+        public List<string> Day_14_TiltDishWest(List<string> dish)
+        {
+            var tiltedDish = dish;
+            for (int r = 0; r < tiltedDish.Count; r++)
+            {
+                var modifiedRow = tiltedDish[r].Trim();
+                while (modifiedRow.Contains(".O"))
+                {
+                    modifiedRow = modifiedRow.Replace(".O", "O.");
+                }
+                tiltedDish[r] = modifiedRow;
+            }
+            return tiltedDish;
+        }
+
+        public List<string> Day_14_TiltDishEast(List<string> dish)
+        {
+            var tiltedDish = dish;
+            for (int r = 0; r < tiltedDish.Count; r++)
+            {
+                var modifiedRow = tiltedDish[r].Trim();
+                while (modifiedRow.Contains("O."))
+                {
+                    modifiedRow = modifiedRow.Replace("O.", ".O");
+                }
+                tiltedDish[r] = modifiedRow;
+            }
+            return tiltedDish;
+        }
+
+        public List<string> Day_14_SpinDish(List<string> dish)
+        {
+            var spunDish = dish;
+            spunDish = Day_14_TiltDishNorth(spunDish);
+            spunDish = Day_14_TiltDishWest(spunDish);
+            spunDish = Day_14_TiltDishSouth(spunDish);
+            spunDish = Day_14_TiltDishEast(spunDish);
+
+            return spunDish;
+        }
+
+        public double Day_14_ScoreDish(List<string> dish)
+        {
+            var score = 0.0;
+            for (int r = 0; r < dish.Count; r++)
+            {
+                score += (dish.Count - r) * dish[r].Count(c => c == 'O');
+            }
+            return score;
+        }
+
+        private Dictionary<string, double> Day_14_B_DishCache = new Dictionary<string, double>();
+        public string Solve_14_B()
+        {
+            var dish = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            var spunDish = dish;
+
+            Day_14_B_DishCache.Add(string.Join("", spunDish.SelectMany(x => x)), 0.0);
+            var i = 1.0;
+            var limit = 1000000000.0;
+            while (i <= limit)
+            {
+                spunDish = Day_14_SpinDish(spunDish);
+                var stringRepresentation = string.Join("", spunDish.SelectMany(x => x));
+
+                if (Day_14_B_DishCache.ContainsKey(stringRepresentation))
+                {
+                    var oldConfigurationIndex = Day_14_B_DishCache[stringRepresentation];
+                    _logger.LogWarning($"This dish configuration already existed at index {oldConfigurationIndex} (currently on index {i})");
+
+                    var frequency = i - oldConfigurationIndex;
+                    var startingPoint = i;
+                    var offset = (Math.Round((limit - startingPoint) / frequency, 0) - 1) * frequency;
+                    offset = offset > 0 ? offset : 0;
+                    _logger.LogInformation($"Skipping {offset} iterations (index {i} -> {i + offset})");
+                    i += offset;
+                }
+                else
+                {
+                    Day_14_B_DishCache.Add(stringRepresentation, i);
+                }
+                i++;
+            }
+
+            var score = Day_14_ScoreDish(spunDish);
+
+            return score.ToString();
+        }
     }
 }
