@@ -1592,7 +1592,7 @@ namespace NewAdventApp
             var input = GetInputForFileAsString(_filename);
 
             var map = input.Split("\n").ToList();
-            var expandedMap = ExpandMap(map);
+            var expandedMap = Day_11_ExpandMap(map);
 
             var galaxies = new List<(int, int)>();
             for (int r = 0; r < expandedMap.Count; r++)
@@ -1612,7 +1612,7 @@ namespace NewAdventApp
             {
                 for (int b = a + 1; b < galaxies.Count; b++)
                 {
-                    var distance = GetDistanceBetweenGalaxies(galaxies[a], galaxies[b]);
+                    var distance = Day_11_GetDistanceBetweenGalaxies(galaxies[a], galaxies[b]);
                     logs.Add($"({galaxies[a].Item1}, {galaxies[a].Item2}) to ({galaxies[b].Item1}, {galaxies[b].Item2}) = {distance}");
                     sum += distance;
                 }
@@ -1621,12 +1621,12 @@ namespace NewAdventApp
             return sum.ToString();
         }
 
-        private int GetDistanceBetweenGalaxies((int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy)
+        private int Day_11_GetDistanceBetweenGalaxies((int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy)
         {
             return Math.Abs(firstGalaxy.Row - secondGalaxy.Row) + Math.Abs(firstGalaxy.Column - secondGalaxy.Column);
         }
 
-        private double GetDistanceBetweenGalaxies_PartB(List<string> map, (int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy, double factor)
+        private double Day_11_GetDistanceBetweenGalaxies_PartB(List<string> map, (int Row, int Column) firstGalaxy, (int Row, int Column) secondGalaxy, double factor)
         {
             var verticalExpansions = 0;
             for (int r = Math.Min(firstGalaxy.Row, secondGalaxy.Row); r < Math.Max(firstGalaxy.Row, secondGalaxy.Row); r++)
@@ -1650,7 +1650,7 @@ namespace NewAdventApp
                     + Math.Abs(firstGalaxy.Column - secondGalaxy.Column) + horizontalExpansion * (factor - 1.0);
         }
 
-        private List<string> ExpandMap(List<string> map)
+        private List<string> Day_11_ExpandMap(List<string> map)
         {
             var expandedMap = map;
             for (int r = 0; r < expandedMap.Count; r++)
@@ -1679,7 +1679,7 @@ namespace NewAdventApp
             return expandedMap;
         }
 
-        private List<string> ExpandMap_PartB(List<string> map)
+        private List<string> Day_11_ExpandMap_PartB(List<string> map)
         {
             var expandedMap = map;
             for (int r = 0; r < expandedMap.Count; r++)
@@ -1712,7 +1712,7 @@ namespace NewAdventApp
             var input = GetInputForFileAsString(_filename);
 
             var map = input.Split("\n").ToList();
-            var expandedMap = ExpandMap_PartB(map);
+            var expandedMap = Day_11_ExpandMap_PartB(map);
 
             var galaxies = new List<(int, int)>();
             for (int r = 0; r < expandedMap.Count; r++)
@@ -1732,7 +1732,7 @@ namespace NewAdventApp
             {
                 for (int b = a + 1; b < galaxies.Count; b++)
                 {
-                    var distance = GetDistanceBetweenGalaxies_PartB(expandedMap, galaxies[a], galaxies[b], 1000000.0);
+                    var distance = Day_11_GetDistanceBetweenGalaxies_PartB(expandedMap, galaxies[a], galaxies[b], 1000000.0);
                     logs.Add($"({galaxies[a].Item1}, {galaxies[a].Item2}) to ({galaxies[b].Item1}, {galaxies[b].Item2}) = {distance}");
                     sum += distance;
                 }
@@ -1740,6 +1740,131 @@ namespace NewAdventApp
 
             _logger.LogInformation(string.Join("\n", expandedMap));
             Thread.Sleep(2000);
+
+            return sum.ToString();
+        }
+
+        public string Solve_12_A()
+        {
+            var inputs = GetInputForFileAsString(_filename).Split("\r\n\r\n");
+
+            var sum = 0.0;
+            foreach (var input in inputs)
+            {
+                sum += Day_12_GetScoreForMirrorInput(input);
+            }
+
+            return sum.ToString();
+        }
+
+        private double Day_12_GetScoreForMirrorInput(string input, int ignoreRow = -1, int ignoreColumn = -1)
+        {
+            var map = input.Split("\r\n").Select(m => m.Trim()).ToList();
+            var score = 0.0;
+
+            for (int r = 0; r + 1 < map.Count; r++)
+            {
+                if (r == ignoreRow)
+                {
+                    continue;
+                }
+
+                var rowsBelow = map.GetRange(r + 1, map.Count() - r - 1);
+                var rowsAbove = map.GetRange(0, r + 1);
+                rowsAbove.Reverse();
+
+                var isMatch = true;
+                for (int i = 0; i < rowsBelow.Count() && i < rowsAbove.Count(); i++)
+                {
+                    isMatch = isMatch && rowsBelow[i].Trim() == rowsAbove[i].Trim();
+                    if (!isMatch)
+                    {
+                        break;
+                    }
+                }
+
+                if (isMatch)
+                {
+                    // _logger.LogInformation($"Horizontal axis found with {rowsAbove.Count()} rows above it.");
+                    score += 100.0 * rowsAbove.Count();
+                    break;
+                }
+            }
+
+            var numberOfColumns = map.Min(r => r.Length);
+            for (int c = 0; c + 1 < numberOfColumns; c++)
+            {
+                if (c == ignoreColumn)
+                {
+                    continue;
+                }
+
+                var isMatch = true;
+                for (int r = 0; r < map.Count; r++)
+                {
+                    if (string.IsNullOrWhiteSpace(map[r]) || c + 1 > map[r].Length - 1)
+                    {
+                        continue;
+                    }
+                    var stringToRight = map[r].Trim().Substring(c + 1).Trim();
+                    var stringToLeft = map[r].Trim().Substring(0, c + 1).Trim();
+                    var charsToLeft = stringToLeft.ToCharArray();
+                    Array.Reverse(charsToLeft);
+                    stringToLeft = new string(charsToLeft);
+
+                    var length = Math.Min(stringToLeft.Length, stringToRight.Length);
+                    stringToLeft = stringToLeft.Substring(0, length);
+                    stringToRight = stringToRight.Substring(0, length);
+
+                    isMatch = isMatch && stringToLeft == stringToRight;
+                    if (!isMatch)
+                    {
+                        break;
+                    }
+
+                }
+
+                if (isMatch)
+                {
+                    // _logger.LogInformation($"Vertical axis found with {c + 1} columns to left of it.");
+                    score += c + 1;
+                    break;
+                }
+            }
+
+            return score;
+        }
+
+        public string Solve_12_B()
+        {
+            // Unsuccessful with brute force attempt
+            // Advice from Reddit: Try Linq.Zip to count the pairs of rows with only 1 difference
+
+            var inputs = GetInputForFileAsString(_filename).Split("\r\n\r\n");
+
+            var sum = 0.0;
+            var puzzleNumber = 1;
+            foreach (var input in inputs.Select(i => i.Trim()))
+            {
+                var originalScore = Day_12_GetScoreForMirrorInput(input);
+                var ignoreRow = originalScore >= 100 ? (int)(originalScore / 100) - 1 : -1;
+                var ignoreColumn = originalScore < 100 ? (int)originalScore - 1 : -1;
+
+                var newScore = originalScore;
+                for (int x = 0; x < input.Length; x++)
+                {
+                    var newCharacter = input[x] == '#' ? "." : "#";
+                    var newInput = input.Remove(x, 1).Insert(x, newCharacter);
+                    newScore = Day_12_GetScoreForMirrorInput(newInput, ignoreRow, ignoreColumn);
+                    if (newScore != originalScore && newScore > 0)
+                    {
+                        break;
+                    }
+                }
+                _logger.LogInformation($"Puzzle {puzzleNumber}: Score changed from {originalScore} to {newScore}");
+                sum += newScore;
+                puzzleNumber++;
+            }
 
             return sum.ToString();
         }
