@@ -1744,20 +1744,20 @@ namespace NewAdventApp
             return sum.ToString();
         }
 
-        public string Solve_12_A()
+        public string Solve_13_A()
         {
             var inputs = GetInputForFileAsString(_filename).Split("\r\n\r\n");
 
             var sum = 0.0;
             foreach (var input in inputs)
             {
-                sum += Day_12_GetScoreForMirrorInput(input);
+                sum += Day_13_GetScoreForMirrorInput(input);
             }
 
             return sum.ToString();
         }
 
-        private double Day_12_GetScoreForMirrorInput(string input, int ignoreRow = -1, int ignoreColumn = -1)
+        private double Day_13_GetScoreForMirrorInput(string input, int ignoreRow = -1, int ignoreColumn = -1)
         {
             var map = input.Split("\r\n").Select(m => m.Trim()).ToList();
             var score = 0.0;
@@ -1835,7 +1835,7 @@ namespace NewAdventApp
             return score;
         }
 
-        public string Solve_12_B()
+        public string Solve_13_B()
         {
             // Unsuccessful with brute force attempt
             // Advice from Reddit: Try Linq.Zip to count the pairs of rows with only 1 difference
@@ -1846,7 +1846,7 @@ namespace NewAdventApp
             var puzzleNumber = 1;
             foreach (var input in inputs.Select(i => i.Trim()))
             {
-                var originalScore = Day_12_GetScoreForMirrorInput(input);
+                var originalScore = Day_13_GetScoreForMirrorInput(input);
                 var ignoreRow = originalScore >= 100 ? (int)(originalScore / 100) - 1 : -1;
                 var ignoreColumn = originalScore < 100 ? (int)originalScore - 1 : -1;
 
@@ -1855,7 +1855,7 @@ namespace NewAdventApp
                 {
                     var newCharacter = input[x] == '#' ? "." : "#";
                     var newInput = input.Remove(x, 1).Insert(x, newCharacter);
-                    newScore = Day_12_GetScoreForMirrorInput(newInput, ignoreRow, ignoreColumn);
+                    newScore = Day_13_GetScoreForMirrorInput(newInput, ignoreRow, ignoreColumn);
                     if (newScore != originalScore && newScore > 0)
                     {
                         break;
