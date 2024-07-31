@@ -2070,5 +2070,78 @@ namespace NewAdventApp
 
             return score.ToString();
         }
+
+        public string Solve_15_A()
+        {
+            var input = GetInputForFileAsString(_filename).Replace("\r\n", ",").Split(",").ToList();
+            var sum = input.Sum(i => Day_15_GetAsciiScore(i));
+            return sum.ToString();
+        }
+
+        private int Day_15_GetAsciiScore(string input)
+        {
+            var score = 0;
+            foreach (var character in input.Trim())
+            {
+                score += (int)character;
+                score *= 17;
+                score %= 256;
+            }
+            return score;
+        }
+
+        public string Solve_15_B()
+        {
+            var input = GetInputForFileAsString(_filename).Replace("\r\n", ",").Split(",").ToList();
+            var boxes = new Dictionary<int, List<string>>();
+            for (int i = 0; i <= 255; i++)
+            {
+                boxes.Add(i, new List<string>());
+            }
+
+            foreach (var instruction in input)
+            {
+                var label = instruction.Split("-").First().Split("=").First().Trim();
+                var boxNumber = Day_15_GetAsciiScore(label);
+                var shouldRemove = instruction.Contains('-');
+                var formattedLens = instruction.Trim().Replace("=", " ");
+
+                if (shouldRemove && boxes[boxNumber].Any(v => v.Contains(label)))
+                {
+                    var index = boxes[boxNumber].FindIndex(v => v.Contains(label));
+                    boxes[boxNumber].RemoveAt(index);
+                }
+
+                if (!shouldRemove)
+                {
+                    if (boxes[boxNumber].Any(v => v.Contains(label)))
+                    {
+                        var index = boxes[boxNumber].FindIndex(v => v.Contains(label));
+                        boxes[boxNumber].RemoveAt(index);
+                        boxes[boxNumber].Insert(index, formattedLens);
+                    }
+                    else
+                    {
+                        boxes[boxNumber].Add(formattedLens);
+                    }
+                }
+            }
+
+            var score = boxes.Where(b => b.Value.Any()).Sum(b => Day_15_ScoreBox(b));
+
+            _logger.LogInformation($"Boxes:\n" + string.Join("\n", boxes.Where(b => b.Value.Any()).Select(b => $"Box {b.Key}: " + string.Join(",", b.Value))));
+            Thread.Sleep(1000);
+            return score.ToString();
+        }
+
+        private double Day_15_ScoreBox(KeyValuePair<int, List<string>> input)
+        {
+            var score = 0.0;
+            for (int i = 0; i < input.Value.Count(); i++)
+            {
+                score += (input.Key + 1) * (i + 1) * int.Parse(input.Value[i].Last().ToString());
+            }
+            return score;
+        }
     }
 }
