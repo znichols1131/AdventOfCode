@@ -2143,5 +2143,200 @@ namespace NewAdventApp
             }
             return score;
         }
+
+        private enum Day16_Direction
+        {
+            Right,
+            Down,
+            Left,
+            Up
+        }
+        private List<((int, int), Day16_Direction)> Day_16_LightCache = new List<((int, int), Day16_Direction)>();
+        private List<(int, int)> Day_16_EnergizedMap = new List<(int, int)>();
+        private List<string> Day_16_InputMap = new List<string>();
+        public string Solve_16_A()
+        {
+            Day_16_InputMap = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+
+            var energizedSum = GetScoreForStart(((0, 0), Day16_Direction.Right));
+
+            return energizedSum.ToString();
+        }
+
+        private double GetScoreForStart(((int, int), Day16_Direction) start)
+        {
+            Day_16_EnergizedMap.Clear();
+            Day_16_LightCache.Clear();
+            var nextSteps = new List<((int, int), Day16_Direction)>()
+            {
+                start
+            };
+
+            while (nextSteps.Any())
+            {
+                var nextStep = nextSteps.First();
+                nextSteps.RemoveAt(0);
+                nextSteps.AddRange(GetNextSteps(nextStep.Item1.Item1, nextStep.Item1.Item2, nextStep.Item2));
+            }
+
+            return Day_16_EnergizedMap.Count();
+        }
+
+        private List<((int, int), Day16_Direction)> GetNextSteps(int row, int column, Day16_Direction currentDirection)
+        {
+            var nextSteps = new List<((int, int), Day16_Direction)>();
+
+            if (row < 0 || row >= Day_16_InputMap.Count() || column < 0 || column >= Day_16_InputMap.First().Length)
+            {
+                return nextSteps;
+            }
+
+            if (Day_16_LightCache.Contains(((row, column), currentDirection)))
+            {
+                return nextSteps;
+            }
+            else
+            {
+                Day_16_LightCache.Add(((row, column), currentDirection));
+            }
+
+            if (!Day_16_EnergizedMap.Any(e => e.Item1 == row && e.Item2 == column))
+            {
+                Day_16_EnergizedMap.Add((row, column));
+            }
+
+            var currentCharacter = Day_16_InputMap[row][column];
+            if (currentCharacter == '|' && (currentDirection == Day16_Direction.Down || currentDirection == Day16_Direction.Up))
+            {
+                currentCharacter = '.';
+            }
+            else if (currentCharacter == '-' && (currentDirection == Day16_Direction.Right || currentDirection == Day16_Direction.Left))
+            {
+                currentCharacter = '.';
+            }
+
+            var nextDirection = currentDirection;
+            switch (currentCharacter)
+            {
+                case '.':
+                    nextSteps.Add((GetNextCoordinate(row, column, currentDirection), currentDirection));
+                    break;
+                case '\\':
+                    nextDirection = GetNextDirectionForSlash(currentDirection, true);
+                    nextSteps.Add((GetNextCoordinate(row, column, nextDirection), nextDirection));
+                    break;
+                case '/':
+                    nextDirection = GetNextDirectionForSlash(currentDirection, false);
+                    nextSteps.Add((GetNextCoordinate(row, column, nextDirection), nextDirection));
+                    break;
+                case '|':
+                    nextSteps.Add((GetNextCoordinate(row, column, Day16_Direction.Up), Day16_Direction.Up));
+                    nextSteps.Add((GetNextCoordinate(row, column, Day16_Direction.Down), Day16_Direction.Down));
+                    break;
+                case '-':
+                    nextSteps.Add((GetNextCoordinate(row, column, Day16_Direction.Right), Day16_Direction.Right));
+                    nextSteps.Add((GetNextCoordinate(row, column, Day16_Direction.Left), Day16_Direction.Left));
+                    break;
+                default:
+                    break;
+            }
+
+            return nextSteps;
+        }
+
+        private (int, int) GetNextCoordinate(int row, int column, Day16_Direction currentDirection)
+        {
+            int nextRow = row;
+            int nextColumn = column;
+            switch (currentDirection)
+            {
+                case Day16_Direction.Right:
+                    nextColumn++;
+                    break;
+                case Day16_Direction.Down:
+                    nextRow++;
+                    break;
+                case Day16_Direction.Left:
+                    nextColumn--;
+                    break;
+                case Day16_Direction.Up:
+                    nextRow--;
+                    break;
+                default:
+                    break;
+            }
+
+            return (nextRow, nextColumn);
+        }
+
+        private Day16_Direction GetNextDirectionForSlash(Day16_Direction currentDirection, bool isBackSlash = false)
+        {
+            if (isBackSlash)
+            {
+                // \
+                switch (currentDirection)
+                {
+                    case Day16_Direction.Right:
+                        return Day16_Direction.Down;
+                    case Day16_Direction.Down:
+                        return Day16_Direction.Right;
+                    case Day16_Direction.Left:
+                        return Day16_Direction.Up;
+                    case Day16_Direction.Up:
+                        return Day16_Direction.Left;
+                    default:
+                        return currentDirection;
+                }
+            }
+            else
+            {
+                // /
+                switch (currentDirection)
+                {
+                    case Day16_Direction.Right:
+                        return Day16_Direction.Up;
+                    case Day16_Direction.Down:
+                        return Day16_Direction.Left;
+                    case Day16_Direction.Left:
+                        return Day16_Direction.Down;
+                    case Day16_Direction.Up:
+                        return Day16_Direction.Right;
+                    default:
+                        return currentDirection;
+                }
+            }
+        }
+
+        public string Solve_16_B()
+        {
+            Day_16_InputMap = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            var energizedSum = 0.0;
+
+            var startingSteps = new List<((int, int), Day16_Direction)>();
+            for (int r = 0; r < Day_16_InputMap.Count(); r++)
+            {
+                startingSteps.Add(((r, 0), Day16_Direction.Right));
+                startingSteps.Add(((r, Day_16_InputMap.First().Length - 1), Day16_Direction.Left));
+            }
+            for (int c = 0; c < Day_16_InputMap.First().Length; c++)
+            {
+                startingSteps.Add(((0, c), Day16_Direction.Down));
+                startingSteps.Add(((Day_16_InputMap.Count() - 1, c), Day16_Direction.Up));
+            }
+
+            foreach (var start in startingSteps.OrderBy(s => s.Item1.Item1).ThenBy(s => s.Item1.Item2))
+            {
+                var thisEnergizedSum = GetScoreForStart(start);
+
+                if (thisEnergizedSum > energizedSum)
+                {
+                    _logger.LogWarning($"Higher energy sum found at ({start.Item1.Item1}, {start.Item1.Item2}) with direction {start.Item2}. Sum = {thisEnergizedSum}");
+                    energizedSum = thisEnergizedSum;
+                    Thread.Sleep(250);
+                }
+            }
+
+            return energizedSum.ToString();
+        }
     }
 }
