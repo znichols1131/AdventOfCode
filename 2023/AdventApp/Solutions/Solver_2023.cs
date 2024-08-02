@@ -2338,5 +2338,148 @@ namespace NewAdventApp
 
             return energizedSum.ToString();
         }
+
+        private List<((int, int) To, (int, int) From)> Day17_CameFromLocation = new List<((int, int), (int, int))>();
+        private Dictionary<(int, int), double> Day17_CostSoFar = new Dictionary<(int, int), double>();
+        private Dictionary<(int, int), int> Day17_HeuristicMap = new Dictionary<(int, int), int>();
+        private int Day17_MapHeight = 0;
+        private int Day17_MapWidth = 0;
+        private (int Row, int Column) _target = (0, 0);
+        public string Solve_17_A()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            Day17_MapHeight = input.Count();
+            Day17_MapWidth = input.First().Length;
+            _target = (Day17_MapHeight - 1, Day17_MapWidth - 1);
+
+            for (int r = 0; r < Day17_MapHeight; r++)
+            {
+                for (int c = 0; c < Day17_MapWidth; c++)
+                {
+                    Day17_HeuristicMap.Add((r, c), int.Parse(input[r][c].ToString()));
+                }
+            }
+
+            try
+            {
+                FillOutCostOfPoint((0, 0), (-100, -100), 0.0, 0);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message + e.StackTrace);
+            }
+
+            // _logger.LogInformation(string.Join($"\n", Day17_CostSoFar.OrderBy(x => x.Key.Item1)
+            //                                                         .ThenBy(x => x.Key.Item2)
+            //                                                         .Select(x => $"{x.Key}\t{x.Value}")));
+            PrintCosts();
+            Thread.Sleep(1000);
+
+            if (!Day17_CostSoFar.Any(x => x.Key == _target))
+            {
+                _logger.LogError($"Target not reached.");
+                return "Target not reached.";
+            }
+
+            return Day17_CostSoFar[_target].ToString();
+        }
+
+        private void FillOutCostOfPoint((int Row, int Column) point, (int Row, int Column) previousPoint, double costSoFar, int numberOfStraightsInARow = 0)
+        {
+            if (Day17_CameFromLocation.Any(x => x.To == point && x.From == previousPoint))
+            {
+                return;
+            }
+            Day17_CameFromLocation.Add((point, previousPoint));
+
+            var originalCost = costSoFar;
+            if (Day17_CostSoFar.Any(c => c.Key == point))
+            {
+                originalCost = Day17_CostSoFar[point];
+                if (originalCost < costSoFar)
+                {
+                    return;
+                }
+                Day17_CostSoFar[point] = costSoFar;
+            }
+            else
+            {
+                Day17_CostSoFar.Add(point, costSoFar);
+            }
+
+            if (point.Row == _target.Row && point.Column == _target.Column)
+            {
+                _logger.LogInformation($"Target found!");
+                return;
+            }
+
+            var neighbors = Day17_GetValidNeighbors(point.Row, point.Column).OrderBy(p => GetRelativeDistanceBetweenPoints(point, _target));
+            foreach (var neighbor in neighbors)
+            {
+                var nextCost = GetHeuristicCostOfPoint(neighbor.Row, neighbor.Column);
+                var continuesToGoStraight = (point.Row == neighbor.Row && point.Row == previousPoint.Row) || (point.Column == neighbor.Column && point.Column == previousPoint.Column);
+                var newNumberOfStraightInRow = continuesToGoStraight ? numberOfStraightsInARow + 1 : 0;
+                if (newNumberOfStraightInRow >= 3)
+                {
+                    continue;
+                }
+                FillOutCostOfPoint(neighbor, point, costSoFar + nextCost, newNumberOfStraightInRow);
+                Thread.Sleep(100);
+            }
+        }
+
+        private List<(int Row, int Column)> Day17_GetValidNeighbors(int row, int column)
+        {
+            var neighbors = new List<(int, int)>();
+            if (row > 0 && !Day17_CameFromLocation.Any(x => x.To == (row - 1, column) && x.From == (row, column)))
+            {
+                neighbors.Add((row - 1, column));
+            }
+            if (row < Day17_MapHeight - 1 && !Day17_CameFromLocation.Any(x => x.To == (row + 1, column) && x.From == (row, column)))
+            {
+                neighbors.Add((row + 1, column));
+            }
+            if (column > 0 && !Day17_CameFromLocation.Any(x => x.To == (row, column - 1) && x.From == (row, column)))
+            {
+                neighbors.Add((row, column - 1));
+            }
+            if (column < Day17_MapWidth - 1 && !Day17_CameFromLocation.Any(x => x.To == (row, column + 1) && x.From == (row, column)))
+            {
+                neighbors.Add((row, column + 1));
+            }
+            return neighbors;
+        }
+
+        private int GetRelativeDistanceBetweenPoints((int Row, int Column) firstPoint, (int Row, int Column) secondPoint)
+        {
+            return Math.Abs(firstPoint.Row - secondPoint.Row) + Math.Abs(firstPoint.Column - secondPoint.Column);
+        }
+
+        private int GetHeuristicCostOfPoint(int row, int column)
+        {
+            return Day17_HeuristicMap[(row, column)];
+        }
+
+        private void PrintCosts()
+        {
+            var lines = new List<string>();
+            for (int r = 0; r < Day17_MapHeight; r++)
+            {
+                var values = new List<double>();
+                for (int c = 0; c < Day17_MapWidth; c++)
+                {
+                    values.Add(Day17_CostSoFar[(r, c)]);
+                }
+                lines.Add(string.Join("\t", values.Select(v => v.ToString())));
+            }
+            _logger.LogInformation(string.Join("\n", lines));
+        }
+
+        public string Solve_17_B()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+
+            return "";
+        }
     }
 }
