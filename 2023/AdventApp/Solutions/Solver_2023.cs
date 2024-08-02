@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -2144,7 +2145,7 @@ namespace NewAdventApp
             return score;
         }
 
-        private enum Day16_Direction
+        public enum Day16_Direction
         {
             Right,
             Down,
@@ -2480,6 +2481,157 @@ namespace NewAdventApp
             var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
 
             return "";
+        }
+
+        List<(int X, int Y)> PerimeterPoints = new() { (0, 0) };
+        public class Day18_Instruction
+        {
+            public Day16_Direction Direction;
+            public int NumberOfSpaces;
+            public string Color;
+
+            public Day18_Instruction(string input)
+            {
+                var components = input.Trim().Split(" ");
+
+                NumberOfSpaces = int.Parse(components[1].Trim());
+                Color = components.Last().Trim().Trim(')').Trim('(').Trim('#');
+
+                switch (components.First().Trim())
+                {
+                    case "R":
+                        Direction = Day16_Direction.Right;
+                        break;
+                    case "L":
+                        Direction = Day16_Direction.Left;
+                        break;
+                    case "U":
+                        Direction = Day16_Direction.Up;
+                        break;
+                    case "D":
+                        Direction = Day16_Direction.Down;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            public void AdjustForPartB()
+            {
+                NumberOfSpaces = int.Parse(Color.Substring(0, 5), NumberStyles.HexNumber);
+                Direction = (Day16_Direction)int.Parse(Color.Last().ToString());
+            }
+        }
+        private int Day18_CurrentRow = 0;
+        private int Day18_CurrentColumn = 0;
+        public string Solve_18_A()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            var instructions = new List<Day18_Instruction>();
+            foreach (var line in input)
+            {
+                instructions.Add(new Day18_Instruction(line));
+            }
+
+            var perimeterArea = 0.0;
+            foreach (var instruction in instructions)
+            {
+                perimeterArea += instruction.NumberOfSpaces;
+                PerimeterPoints.Add(Day18_ExecuteDirection(instruction.NumberOfSpaces, instruction.Direction));
+            }
+
+            var enclosedArea = Day18_CalculateAreaUsingTriangleFormula(PerimeterPoints);
+            var totalArea = (perimeterArea + enclosedArea) / 2 + 1;
+
+            _logger.LogInformation($"Perimeter: {perimeterArea}\nEnclosed: {enclosedArea}\nTotal: {totalArea}");
+
+            return totalArea.ToString();
+        }
+
+        private (int X, int Y) Day18_ExecuteDirection(int numberOfSpaces, Day16_Direction direction)
+        {
+            switch (direction)
+            {
+                case Day16_Direction.Right:
+                    return Day18_GoRight(numberOfSpaces);
+                case Day16_Direction.Down:
+                    return Day18_GoDown(numberOfSpaces);
+                case Day16_Direction.Left:
+                    return Day18_GoLeft(numberOfSpaces);
+                case Day16_Direction.Up:
+                default:
+                    return Day18_GoUp(numberOfSpaces);
+            }
+        }
+
+        private (int X, int Y) Day18_GoUp(int numberOfSpaces)
+        {
+            Day18_CurrentRow -= numberOfSpaces;
+            return (Day18_CurrentRow, Day18_CurrentColumn);
+        }
+
+        private (int X, int Y) Day18_GoDown(int numberOfSpaces)
+        {
+            Day18_CurrentRow += numberOfSpaces;
+            return (Day18_CurrentRow, Day18_CurrentColumn);
+        }
+
+        private (int X, int Y) Day18_GoLeft(int numberOfSpaces)
+        {
+            Day18_CurrentColumn -= numberOfSpaces;
+            return (Day18_CurrentRow, Day18_CurrentColumn);
+        }
+
+        private (int X, int Y) Day18_GoRight(int numberOfSpaces)
+        {
+            Day18_CurrentColumn += numberOfSpaces;
+            return (Day18_CurrentRow, Day18_CurrentColumn);
+        }
+
+        private double Day18_CalculateAreaUsingTriangleFormula(List<(int X, int Y)> perimeterPoints)
+        {
+            var area = 0.0;
+            for (int i = 1; i < perimeterPoints.Count(); i++)
+            {
+                area += Day18_GetDeterminantOfPoints(perimeterPoints[i - 1], perimeterPoints[i]);
+            }
+            area += Day18_GetDeterminantOfPoints(perimeterPoints.Last(), perimeterPoints.First());
+
+            return Math.Abs(area);
+        }
+
+        private double Day18_GetDeterminantOfPoints((double X, double Y) firstPoint, (double X, double Y) secondPoint)
+        {
+            return (firstPoint.Y + secondPoint.Y) * (firstPoint.X - secondPoint.X);
+        }
+
+        public string Solve_18_B()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            var instructions = new List<Day18_Instruction>();
+            foreach (var line in input)
+            {
+                var instruction = new Day18_Instruction(line);
+                instruction.AdjustForPartB();
+                instructions.Add(instruction);
+            }
+
+            var perimeterArea = 0.0;
+            foreach (var instruction in instructions)
+            {
+                perimeterArea += instruction.NumberOfSpaces;
+                var destination = Day18_ExecuteDirection(instruction.NumberOfSpaces, instruction.Direction);
+                _logger.LogInformation($"Going {instruction.NumberOfSpaces} meters {instruction.Direction}\t\t({destination.X}, {destination.Y})");
+                Thread.Sleep(100);
+                PerimeterPoints.Add(destination);
+            }
+
+            var enclosedArea = Day18_CalculateAreaUsingTriangleFormula(PerimeterPoints);
+            var totalArea = (perimeterArea + enclosedArea) / 2 + 1;
+
+            _logger.LogInformation($"Perimeter: {perimeterArea}\nEnclosed: {enclosedArea}\nTotal: {totalArea}");
+
+            return totalArea.ToString();
         }
     }
 }

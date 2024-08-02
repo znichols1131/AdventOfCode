@@ -17,6 +17,15 @@ namespace NewAdventApp
             throw new Exception($"Input file could not be found at {filePath}");
         }
 
+        public void WriteStringToFile(string filename, string output)
+        {
+            string filePath = GetRootDirectory() + filename;
+            using (StreamWriter outputFile = new StreamWriter(filePath))
+            {
+                outputFile.Write(output);
+            }
+        }
+
         public StreamReader GetInputForFileAsStreamReader(string filename)
         {
             string filePath = GetRootDirectory() + filename;
