@@ -2633,5 +2633,230 @@ namespace NewAdventApp
 
             return totalArea.ToString();
         }
+
+        public enum Day19_Category
+        {
+            X,
+            M,
+            A,
+            S
+        }
+
+        public class Day19_WorkflowRule
+        {
+            public Day19_Category Category;
+            public bool OperatorIsLessThan;
+            public int Limit;
+            public string NextWorkflow;
+
+            public Day19_WorkflowRule()
+            {
+            }
+
+            public Day19_WorkflowRule(string input)
+            {
+                switch (input.First())
+                {
+                    case 'x':
+                        Category = Day19_Category.X;
+                        break;
+                    case 'm':
+                        Category = Day19_Category.M;
+                        break;
+                    case 'a':
+                        Category = Day19_Category.A;
+                        break;
+                    case 's':
+                    default:
+                        Category = Day19_Category.S;
+                        break;
+                }
+
+                OperatorIsLessThan = input.Contains("<");
+
+                Regex regexToGetLimit = new Regex(@"(?<=[<>])(.*)(?=[:])");
+                Limit = int.Parse(regexToGetLimit.Match(input).Value);
+                NextWorkflow = input.Split(":").Last();
+            }
+
+            public string GetStringRepresentation()
+            {
+                var categoryString = "";
+                switch (Category)
+                {
+                    case Day19_Category.X:
+                        categoryString = "x";
+                        break;
+                    case Day19_Category.M:
+                        categoryString = "m";
+                        break;
+                    case Day19_Category.A:
+                        categoryString = "a";
+                        break;
+                    case Day19_Category.S:
+                        categoryString = "s";
+                        break;
+                    default:
+                        break;
+                }
+
+                var operatorSymbol = OperatorIsLessThan ? "<" : ">";
+                return $"{categoryString}{operatorSymbol}{Limit}";
+            }
+        }
+
+        public class Day19_Workflow
+        {
+            public string Name;
+            public List<Day19_WorkflowRule> Rules = new();
+            public string DefaultWorkflow;
+
+            public Day19_Workflow() { }
+
+            public Day19_Workflow(string input)
+            {
+                Name = input.Split("{").First().Trim();
+                DefaultWorkflow = input.Split($",").Last().Split("}").First().Trim();
+                foreach (var rule in input.Split("{").Last().Split("}").First().Split(",").ToList().Where(r => r.Contains(":")))
+                {
+                    Rules.Add(new Day19_WorkflowRule(rule));
+                }
+            }
+
+            public string GetStringRepresentation()
+            {
+                return $"{Name}: " + string.Join($", ", Rules.Select(r => r.GetStringRepresentation()));
+            }
+        }
+
+        public class Day19_Part
+        {
+            public int X;
+            public int M;
+            public int A;
+            public int S;
+
+            public Day19_Part() { }
+            public Day19_Part(string inputs)
+            {
+                foreach (var input in inputs.Split("{").Last().Split("}").First().Split(",").ToList())
+                {
+                    var value = int.Parse(input.Split("=").Last());
+                    switch (input.First())
+                    {
+                        case 'x':
+                            X = value;
+                            break;
+                        case 'm':
+                            M = value;
+                            break;
+                        case 'a':
+                            A = value;
+                            break;
+                        case 's':
+                        default:
+                            S = value;
+                            break;
+                    }
+                }
+            }
+
+            public int GetScore()
+            {
+                return X + M + A + S;
+            }
+
+            public int GetScoreForCategory(Day19_Category category)
+            {
+                switch (category)
+                {
+                    case Day19_Category.X:
+                        return X;
+                    case Day19_Category.M:
+                        return M;
+                    case Day19_Category.A:
+                        return A;
+                    case Day19_Category.S:
+                        return S;
+                    default:
+                        return 0;
+                }
+            }
+
+            public string GetStringRepresentation()
+            {
+                return $"x={X},m={M},a={A},s={S}";
+            }
+        }
+
+        private List<Day19_Workflow> Day19_Workflows = new List<Day19_Workflow>();
+        public string Solve_19_A()
+        {
+            var workflowInputs = GetInputForFileAsString(_filename).Split("\r\n\r\n").First().Split("\r\n").ToList();
+            var partInputs = GetInputForFileAsString(_filename).Split("\r\n\r\n").Last().Split("\r\n").ToList();
+
+            foreach (var workflowInput in workflowInputs)
+            {
+                Day19_Workflows.Add(new Day19_Workflow(workflowInput));
+            }
+
+            var parts = new List<Day19_Part>();
+            foreach (var partInput in partInputs)
+            {
+                parts.Add(new Day19_Part(partInput));
+            }
+
+            var acceptedParts = new List<Day19_Part>();
+            var totalScore = 0;
+            Day19_Workflow firstWorkflow = Day19_Workflows.FirstOrDefault(w => w.Name == "in");
+            foreach (var part in parts)
+            {
+                var result = Day19_GetDestinationForPart(part, firstWorkflow);
+                if (result == "A")
+                {
+                    acceptedParts.Add(part);
+                    totalScore += part.GetScore();
+                }
+            }
+            _logger.LogInformation($"\n{acceptedParts.Count()} Accepted Parts:\n" + string.Join("\n", acceptedParts.Select(p => p.GetStringRepresentation())));
+            Thread.Sleep(1000);
+
+            return totalScore.ToString();
+        }
+
+        public string Day19_GetDestinationForPart(Day19_Part part, Day19_Workflow workflow)
+        {
+            foreach (var rule in workflow.Rules)
+            {
+                if ((rule.OperatorIsLessThan && part.GetScoreForCategory(rule.Category) < rule.Limit) ||
+                    (!rule.OperatorIsLessThan && part.GetScoreForCategory(rule.Category) > rule.Limit))
+                {
+                    var destination = rule.NextWorkflow.Trim();
+                    if (destination == "R" || destination == "A")
+                    {
+                        return destination;
+                    }
+
+                    Day19_Workflow nextWorkflow = Day19_Workflows.FirstOrDefault(w => w.Name == destination);
+                    return Day19_GetDestinationForPart(part, nextWorkflow);
+                }
+            }
+
+            if (workflow.DefaultWorkflow == "R" || workflow.DefaultWorkflow == "A")
+            {
+                return workflow.DefaultWorkflow;
+            }
+
+            Day19_Workflow defaultWorkflow = Day19_Workflows.FirstOrDefault(w => w.Name == workflow.DefaultWorkflow);
+            return Day19_GetDestinationForPart(part, defaultWorkflow);
+        }
+
+        public string Solve_19_B()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+
+
+            return "Not complemte";
+        }
     }
 }
