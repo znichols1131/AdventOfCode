@@ -3166,5 +3166,187 @@ namespace NewAdventApp
 
             return "Not complete";
         }
+
+        public class Day22_Range
+        {
+            public int Minimum;
+            public int Maximum;
+
+            public Day22_Range() { }
+
+            public Day22_Range(int minimum, int maximum)
+            {
+                Minimum = minimum;
+                Maximum = maximum;
+            }
+
+            public Day22_Range Clone()
+            {
+                return new Day22_Range(Minimum, Maximum);
+            }
+
+            public bool IntersectsOtherRange(Day22_Range otherRange)
+            {
+                return ContainsValue(otherRange.Minimum) ||
+                        ContainsValue(otherRange.Maximum) ||
+                        otherRange.ContainsValue(Minimum) ||
+                        otherRange.ContainsValue(Maximum);
+            }
+
+            public bool ContainsValue(int value)
+            {
+                return Minimum <= value && value <= Maximum;
+            }
+
+            public void Move(int distance)
+            {
+                Minimum += distance;
+                Maximum += distance;
+            }
+        }
+
+        public class Day22_Brick
+        {
+            public Day22_Range X;
+            public Day22_Range Y;
+            public Day22_Range Z;
+
+            public Day22_Brick() { }
+
+            public Day22_Brick(Day22_Range x, Day22_Range y, Day22_Range z)
+            {
+                X = x;
+                Y = y;
+                Z = z;
+            }
+
+            public Day22_Brick Clone()
+            {
+                return new Day22_Brick(X.Clone(), Y.Clone(), Z.Clone());
+            }
+
+            public string GetString()
+            {
+                return $"({X.Minimum}, {Y.Minimum}, {Z.Minimum}) ~ ({X.Maximum}, {Y.Maximum}, {Z.Maximum})";
+            }
+
+            public Day22_Brick(string input)
+            {
+                var firstPoint = input.Split("~").First().Split(",").Select(c => int.Parse(c)).ToList();
+                var secondPoint = input.Split("~").Last().Split(",").Select(c => int.Parse(c)).ToList();
+
+                X = new Day22_Range(firstPoint[0], secondPoint[0]);
+                Y = new Day22_Range(firstPoint[1], secondPoint[1]);
+                Z = new Day22_Range(firstPoint[2], secondPoint[2]);
+            }
+
+            public bool IntersectsWithOtherBrick(Day22_Brick otherBrick)
+            {
+                return X.IntersectsOtherRange(otherBrick.X) &&
+                        Y.IntersectsOtherRange(otherBrick.Y) &&
+                        Z.IntersectsOtherRange(otherBrick.Z);
+            }
+
+            public void MoveDown(int distance)
+            {
+                Z.Move(-1 * distance);
+            }
+        }
+
+        public List<Day22_Brick> Day22_Bricks = new();
+        public string Solve_22_A()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            Day22_Bricks = input.Select(i => new Day22_Brick(i.Trim())).ToList();
+
+            Day22_MoveBricksDownAndReturnNumberOfBricksMoved(Day22_Bricks);
+
+            var numberOfBlocksThatCanBeDisintegrated = 0;
+            foreach (var brick in Day22_Bricks)
+            {
+                if (Day22_BrickCanBeRemoved(brick))
+                {
+                    numberOfBlocksThatCanBeDisintegrated++;
+                }
+            }
+            return numberOfBlocksThatCanBeDisintegrated.ToString();
+        }
+
+        public bool Day22_BrickCanMoveDown(Day22_Brick brick, List<Day22_Brick> bricks)
+        {
+            if (brick.Z.Minimum == 0)
+            {
+                return false;
+            }
+
+            var bricksImmediatelyBelow = bricks.Where(b => b.Z.Maximum + 1 == brick.Z.Minimum).ToList();
+            if (bricksImmediatelyBelow.Any())
+            {
+                var newPositionOfBrick = brick.Clone();
+                newPositionOfBrick.MoveDown(1);
+                var result = !bricksImmediatelyBelow.Any(b => b.IntersectsWithOtherBrick(newPositionOfBrick));
+                return !bricksImmediatelyBelow.Any(b => b.IntersectsWithOtherBrick(newPositionOfBrick));
+            }
+            return true;
+        }
+
+        public bool Day22_BrickCanBeRemoved(Day22_Brick brick)
+        {
+            var bricksImmediatelyAbove = Day22_Bricks.Where(b => b.Z.Minimum == brick.Z.Maximum + 1).ToList();
+            if (!bricksImmediatelyAbove.Any())
+            {
+                return true;
+            }
+
+            foreach (var brickAbove in bricksImmediatelyAbove)
+            {
+                var bricksImmediatelyBelow = Day22_Bricks.Where(b => b != brick && b.Z.Maximum + 1 == brickAbove.Z.Minimum).ToList();
+                var brickAboveWouldFreefall = !bricksImmediatelyBelow.Any();
+                if (brickAboveWouldFreefall)
+                {
+                    return false;
+                }
+
+                var newPositionOfBrickAbove = brickAbove.Clone();
+                newPositionOfBrickAbove.MoveDown(1);
+                bool blockAboveIsLockedInPlaceStill = bricksImmediatelyBelow.Any(b => b.IntersectsWithOtherBrick(newPositionOfBrickAbove));
+                if (!blockAboveIsLockedInPlaceStill)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public int Day22_MoveBricksDownAndReturnNumberOfBricksMoved(List<Day22_Brick> bricks)
+        {
+            int numberOfBricksMoved = 0;
+            foreach (var brick in bricks.OrderBy(b => b.Z.Minimum).ThenBy(b => b.Z.Maximum))
+            {
+                var canMoveDown = Day22_BrickCanMoveDown(brick, bricks);
+                numberOfBricksMoved += canMoveDown ? 1 : 0;
+                while (canMoveDown)
+                {
+                    brick.MoveDown(1);
+                    canMoveDown = Day22_BrickCanMoveDown(brick, bricks);
+                }
+            }
+            return numberOfBricksMoved;
+        }
+        public string Solve_22_B()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            Day22_Bricks = input.Select(i => new Day22_Brick(i.Trim())).ToList();
+
+            Day22_MoveBricksDownAndReturnNumberOfBricksMoved(Day22_Bricks);
+
+            var numberOfBlocksThatWouldFall = 0;
+            foreach (var brick in Day22_Bricks)
+            {
+                var listOfBricksWithoutThisBrick = Day22_Bricks.Where(b => b != brick).Select(b => b.Clone()).ToList();
+                numberOfBlocksThatWouldFall += Day22_MoveBricksDownAndReturnNumberOfBricksMoved(listOfBricksWithoutThisBrick);
+            }
+            return numberOfBlocksThatWouldFall.ToString();
+        }
     }
 }
