@@ -3085,5 +3085,86 @@ namespace NewAdventApp
             results.Add((currentPartRange, workflow.DefaultWorkflow));
             return results;
         }
+
+        private int Day21_GridHeight;
+        private int Day21_GridWidth;
+        private Dictionary<(int Row, int Col), bool> Day21_Grid = new Dictionary<(int, int), bool>();
+        private List<((int Row, int Col) Point, int StepsTaken)> Day21_ActiveSteps = new();
+        private List<(int Row, int Column)> Day21_Destinations = new();
+        public string Solve_21_A()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").Select(r => r.Trim()).ToList();
+            Day21_GridHeight = input.Count();
+            Day21_GridWidth = input.First().Length;
+            _logger.LogInformation($"Grid is {Day21_GridHeight} rows x {Day21_GridWidth} columns.");
+
+            for (int r = 0; r < Day21_GridHeight; r++)
+            {
+                for (int c = 0; c < Day21_GridWidth; c++)
+                {
+                    Day21_Grid.Add((r, c), ".S".Contains(input[r][c]));
+                    if (input[r][c] == 'S')
+                    {
+                        Day21_ActiveSteps.Add(((r, c), 0));
+                    }
+                }
+            }
+
+            var targetSteps = 64;
+            while (Day21_ActiveSteps.Any())
+            {
+                (var homePoint, var stepsTakenSoFar) = Day21_ActiveSteps.OrderBy(x => x.StepsTaken).First();
+                Day21_ActiveSteps.Remove((homePoint, stepsTakenSoFar));
+
+                if (stepsTakenSoFar == targetSteps)
+                {
+                    if (!Day21_Destinations.Contains(homePoint))
+                    {
+                        Day21_Destinations.Add(homePoint);
+                    }
+                    continue;
+                }
+
+                var neighbors = Day21_GetNeighborPoints(homePoint);
+                foreach (var neighbor in neighbors)
+                {
+                    if (Day21_Grid[neighbor] && !Day21_ActiveSteps.Contains((neighbor, stepsTakenSoFar + 1)))
+                    {
+                        Day21_ActiveSteps.Add((neighbor, stepsTakenSoFar + 1));
+                    }
+                }
+            }
+
+            return Day21_Destinations.Count().ToString();
+        }
+
+        public List<(int Row, int Col)> Day21_GetNeighborPoints((int Row, int Col) StartingPoint)
+        {
+            List<(int Row, int Col)> neighbors = new();
+            if (StartingPoint.Row > 0)
+            {
+                neighbors.Add((StartingPoint.Row - 1, StartingPoint.Col));
+            }
+            if (StartingPoint.Row < Day21_GridHeight - 1)
+            {
+                neighbors.Add((StartingPoint.Row + 1, StartingPoint.Col));
+            }
+            if (StartingPoint.Col > 0)
+            {
+                neighbors.Add((StartingPoint.Row, StartingPoint.Col - 1));
+            }
+            if (StartingPoint.Col < Day21_GridWidth - 1)
+            {
+                neighbors.Add((StartingPoint.Row, StartingPoint.Col + 1));
+            }
+            return neighbors;
+        }
+
+        public string Solve_21_B()
+        {
+            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+
+            return "Not complete";
+        }
     }
 }
