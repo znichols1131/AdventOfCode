@@ -2737,6 +2737,15 @@ namespace NewAdventApp
             public int S;
 
             public Day19_Part() { }
+
+            public Day19_Part(int x, int m, int a, int s)
+            {
+                X = x;
+                M = m;
+                A = a;
+                S = s;
+            }
+
             public Day19_Part(string inputs)
             {
                 foreach (var input in inputs.Split("{").Last().Split("}").First().Split(",").ToList())
@@ -2786,6 +2795,135 @@ namespace NewAdventApp
             public string GetStringRepresentation()
             {
                 return $"x={X},m={M},a={A},s={S}";
+            }
+        }
+
+        public class Day19_Range
+        {
+            public int Minimum;
+            public int Maximum;
+
+            public Day19_Range() { }
+            public Day19_Range(int min, int max)
+            {
+                Minimum = min;
+                Maximum = max;
+            }
+
+            public bool ContainsNumberInclusive(int number)
+            {
+                return Minimum <= number && number <= Maximum;
+            }
+
+            public int GetCount()
+            {
+                return Maximum - Minimum + 1;
+            }
+
+            public string GetStringValue()
+            {
+                return $"[{Minimum}, {Maximum}]";
+            }
+
+            public int GetRandomValue()
+            {
+                var random = new Random();
+                return random.Next(Minimum, Maximum);
+            }
+
+            public List<Day19_Range> SplitUpToAndIncluding(int limit)
+            {
+                var result = new List<Day19_Range>();
+                if (limit >= Minimum)
+                {
+                    result.Add(new Day19_Range(Minimum, Math.Min(Maximum, limit)));
+                }
+                if (limit < Maximum)
+                {
+                    result.Add(new Day19_Range(Math.Max(limit + 1, Minimum), Maximum));
+                }
+                return result;
+            }
+        }
+
+        public class Day19_RangePart
+        {
+            public Day19_Range X;
+            public Day19_Range M;
+            public Day19_Range A;
+            public Day19_Range S;
+
+            public Day19_RangePart() { }
+            public Day19_RangePart(Day19_Range x, Day19_Range m, Day19_Range a, Day19_Range s)
+            {
+                X = x;
+                M = m;
+                A = a;
+                S = s;
+            }
+
+            public Day19_RangePart Clone()
+            {
+                return new Day19_RangePart(X, M, A, S);
+            }
+
+            public string GetStringValue()
+            {
+                return $"X {X.GetStringValue()}\tM {M.GetStringValue()}\tA {A.GetStringValue()}\tS {S.GetStringValue()}";
+            }
+
+            public Day19_Part GetRandomPart()
+            {
+                return new Day19_Part(X.GetRandomValue(), M.GetRandomValue(), A.GetRandomValue(), S.GetRandomValue());
+            }
+
+            public bool ContainsPoint(int x, int m, int a, int s)
+            {
+                return X.ContainsNumberInclusive(x) &&
+                        M.ContainsNumberInclusive(m) &&
+                        A.ContainsNumberInclusive(a) &&
+                        S.ContainsNumberInclusive(s);
+            }
+
+            public double GetNumberOfCominbations()
+            {
+                return 1.0 * X.GetCount() * M.GetCount() * A.GetCount() * S.GetCount();
+            }
+
+            public Day19_Range GetRangeForCategory(Day19_Category category)
+            {
+                switch (category)
+                {
+                    case Day19_Category.X:
+                        return X;
+                    case Day19_Category.M:
+                        return M;
+                    case Day19_Category.A:
+                        return A;
+                    case Day19_Category.S:
+                    default:
+                        return S;
+                }
+            }
+
+            public void SetRangeForCategory(Day19_Category category, Day19_Range range)
+            {
+                switch (category)
+                {
+                    case Day19_Category.X:
+                        X = range;
+                        break;
+                    case Day19_Category.M:
+                        M = range;
+                        break;
+                    case Day19_Category.A:
+                        A = range;
+                        break;
+                    case Day19_Category.S:
+                    default:
+                        S = range;
+                        break;
+                }
             }
         }
 
@@ -2851,12 +2989,101 @@ namespace NewAdventApp
             return Day19_GetDestinationForPart(part, defaultWorkflow);
         }
 
+        List<Day19_RangePart> Day19_PartB_AcceptedPartRanges = new List<Day19_RangePart>();
         public string Solve_19_B()
         {
-            var input = GetInputForFileAsString(_filename).Split("\r\n").ToList();
+            var workflowInputs = GetInputForFileAsString(_filename).Split("\r\n\r\n").First().Split("\r\n").ToList();
+            foreach (var workflowInput in workflowInputs)
+            {
+                Day19_Workflows.Add(new Day19_Workflow(workflowInput));
+            }
 
+            var acceptedPartRanges = new List<Day19_RangePart>();
+            var pendingPartRanges = new List<(Day19_RangePart Range, string NextWorkflowName)>()
+            {
+                (new Day19_RangePart(new Day19_Range(1,4000),new Day19_Range(1,4000),new Day19_Range(1,4000),new Day19_Range(1,4000)), "in")
+            };
 
-            return "Not complemte";
+            while (pendingPartRanges.Any())
+            {
+                (var currentRange, var nextWorkflowName) = pendingPartRanges.First();
+                pendingPartRanges.Remove((currentRange, nextWorkflowName));
+                pendingPartRanges.AddRange(Day19_SplitPartRangeBasedOnWorkflow(currentRange, nextWorkflowName));
+            }
+
+            _logger.LogInformation($"\nResults:\n" + string.Join("\n", Day19_PartB_AcceptedPartRanges.OrderBy(a => a.X.Minimum)
+                                                                                                    .ThenBy(a => a.X.Maximum)
+                                                                                                    .ThenBy(a => a.M.Minimum)
+                                                                                                    .ThenBy(a => a.M.Maximum)
+                                                                                                    .ThenBy(a => a.A.Minimum)
+                                                                                                    .ThenBy(a => a.A.Maximum)
+                                                                                                    .ThenBy(a => a.S.Minimum)
+                                                                                                    .ThenBy(a => a.S.Maximum)
+                                                                                                    .Select(a => a.GetStringValue())));
+            Thread.Sleep(1000);
+
+            var parts = new List<Day19_Part>();
+            foreach (var acceptedPart in Day19_PartB_AcceptedPartRanges.OrderBy(a => a.X.Minimum)
+                                                                        .ThenBy(a => a.X.Maximum)
+                                                                        .ThenBy(a => a.M.Minimum)
+                                                                        .ThenBy(a => a.M.Maximum)
+                                                                        .ThenBy(a => a.A.Minimum)
+                                                                        .ThenBy(a => a.A.Maximum)
+                                                                        .ThenBy(a => a.S.Minimum)
+                                                                        .ThenBy(a => a.S.Maximum))
+            {
+                parts.Add(acceptedPart.GetRandomPart());
+            }
+
+            var acceptedParts = new List<Day19_Part>();
+            Day19_Workflow firstWorkflow = Day19_Workflows.FirstOrDefault(w => w.Name == "in");
+            foreach (var part in parts)
+            {
+                var result = Day19_GetDestinationForPart(part, firstWorkflow);
+            }
+
+            var totalScore = Day19_PartB_AcceptedPartRanges.Sum(a => a.GetNumberOfCominbations());
+            return totalScore.ToString();
+        }
+
+        public List<(Day19_RangePart PartRange, string NextWorkflowName)> Day19_SplitPartRangeBasedOnWorkflow(Day19_RangePart incomingPartRange, string workflowName)
+        {
+            if (workflowName == "A")
+            {
+                Day19_PartB_AcceptedPartRanges.Add(incomingPartRange);
+                return new();
+            }
+            if (workflowName == "R")
+            {
+                return new();
+            }
+
+            List<(Day19_RangePart PartRange, string NextWorkflowName)> results = new();
+            var currentPartRange = incomingPartRange;
+            Day19_Workflow workflow = Day19_Workflows.First(w => w.Name == workflowName);
+            foreach (var rule in workflow.Rules)
+            {
+                var currentRange = currentPartRange.GetRangeForCategory(rule.Category);
+                if (rule.OperatorIsLessThan && currentRange.Minimum < rule.Limit)
+                {
+                    var newRanges = currentRange.SplitUpToAndIncluding(rule.Limit - 1);
+                    var newPartRange = currentPartRange.Clone();
+                    newPartRange.SetRangeForCategory(rule.Category, newRanges.First());
+                    results.Add((newPartRange, rule.NextWorkflow));
+                    currentPartRange.SetRangeForCategory(rule.Category, newRanges.Last());
+                }
+                else if (!rule.OperatorIsLessThan && currentRange.Maximum > rule.Limit)
+                {
+                    var newRanges = currentRange.SplitUpToAndIncluding(rule.Limit);
+                    var newPartRange = currentPartRange.Clone();
+                    newPartRange.SetRangeForCategory(rule.Category, newRanges.Last());
+                    results.Add((newPartRange, rule.NextWorkflow));
+                    currentPartRange.SetRangeForCategory(rule.Category, newRanges.First());
+                }
+            }
+
+            results.Add((currentPartRange, workflow.DefaultWorkflow));
+            return results;
         }
     }
 }
